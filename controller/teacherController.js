@@ -3,10 +3,12 @@ const Course = require("../models/Course");
 async function createCourse(req, res) {
   const { title, description, category, level, duration, price } = req.body;
 
-  const imagePath = req.files ? req.files["image"][0].path : null;
-  const videoPath = req.files ? req.files["video"][0].path : null;
-  console.log('..', req.files['image'][0])
-  console.log('..', req.files['video'][0])
+  const imagePath = req.files
+    ? `http://localhost:3000/uploads/${req.files["image"][0].filename}`
+    : null;
+  const videoPath = req.files
+    ? `http://localhost:3000/uploads/${req.files["video"][0].filename}`
+    : null;
 
   const course = new Course({
     title,
