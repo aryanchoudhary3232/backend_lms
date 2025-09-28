@@ -1,14 +1,12 @@
 const Course = require("../models/Course");
 
 async function createCourse(req, res) {
+  console.log("...", req.files["image"][0]);
+  console.log("...", req.files["video"][0]);
   const { title, description, category, level, duration, price } = req.body;
 
-  const imagePath = req.files
-    ? `http://localhost:3000/uploads/${req.files["image"][0].filename}`
-    : null;
-  const videoPath = req.files
-    ? `http://localhost:3000/uploads/${req.files["video"][0].filename}`
-    : null;
+  const imagePath = req.files ? req.files["image"][0].path : null;
+  const videoPath = req.files ? req.files["video"][0].path : null;
 
   const course = new Course({
     title,
@@ -42,4 +40,15 @@ async function getCourses(req, res) {
   });
 }
 
-module.exports = { createCourse, getCourses };
+async function getcourseById(req, res) {
+  const course = await Course.findById(req.params.courseId);
+
+  res.json({
+    message: "Courses retrieved ",
+    data: course,
+    success: true,
+    error: false,
+  });
+}
+
+module.exports = { createCourse, getCourses, getcourseById };

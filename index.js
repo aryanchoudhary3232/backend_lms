@@ -3,6 +3,7 @@ const app = express();
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
@@ -11,8 +12,10 @@ app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+const MONGO_URL = process.env.MONGO_URL_ATLAS;
+
 mongoose
-  .connect("mongodb://localhost:27017/lms")
+  .connect(MONGO_URL)
   .then(() => console.log("mongodb connected"))
   .catch((err) => console.log("err in mongodb", err));
 

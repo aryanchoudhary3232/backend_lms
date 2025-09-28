@@ -2,17 +2,23 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../cloudinary");
 
 const teacherController = require("../controller/teacherController");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../", "uploads"));
-  },
-  filename: (req, file, cb) => {
-    const suffix = Date.now();
-    const safeName = file.originalname.replace(/\s+/g, "_");
-    cb(null, suffix + "-" + safeName);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: (req, file) => {
+    let resourceType = "image";
+    if (file.mimetype.startsWith("video")) {
+      resourceType = "video";
+    }
+
+    return {
+      folder: `${path.join(__dirname)}uploads`,
+      resource_type: resourceType,
+    };
   },
 });
 
@@ -23,6 +29,7 @@ router.post(
   upload.fields([{ name: "image" }, { name: "video" }]),
   teacherController.createCourse
 );
-router.get("/getCourses", teacherController.getCourses);
+router.get("/get_courses", teacherController.getCourses);
+router.get("/get_course_by_id/:courseId", teacherController.getcourseById);
 
 module.exports = router;
