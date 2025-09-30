@@ -1,12 +1,46 @@
 const Course = require("../models/Course");
+const Teacher = require("../models/Teacher");
+
+async function getTeachers(req, res) {
+  const teachers = await Teacher.find().select("_id name");
+
+  res.json({
+    message: "Teachers retrieved successfully",
+    data: teachers,
+    success: true,
+    error: false,
+  });
+}
 
 async function createCourse(req, res) {
-  console.log("...", req.files["image"][0]);
-  console.log("...", req.files["video"][0]);
-  const { title, description, category, level, duration, price } = req.body;
+  const { title, description, category, level, duration, price, teacher } =
+    req.body;
 
-  const imagePath = req.files ? req.files["image"][0].path : null;
-  const videoPath = req.files ? req.files["video"][0].path : null;
+  let chapters = JSON.parse(req.body.chapters);
+
+  const imageFile = req.files.find((f) => f.fieldname === "image");
+  const videoFile = req.files.find((f) => f.fieldname === "video");
+
+  const imagePath = imageFile.path;
+  const videoPath = videoFile.path;
+console.log('req.files',req.files)
+  const newChapters = chapters.map((chapter, chapterIdx) => {
+    return {
+      title: chapter.title,
+      topics: chapter.topics.map((topic, topicIdx) => {
+        const fileKey = `chapters[${chapterIdx}][topics][${topicIdx}][video]`;
+        console.log('fileKey',fileKey)
+
+        const topicVideoFile = req.files.find((f) => f.fieldname === fileKey);
+        const topicVideoPath = topicVideoFile.path;
+
+        return {
+          title: topic.title,
+          video: topicVideoPath,
+        };
+      }),
+    };
+  });
 
   const course = new Course({
     title,
@@ -17,6 +51,8 @@ async function createCourse(req, res) {
     price,
     image: imagePath,
     video: videoPath,
+    teacher,
+    chapters: newChapters,
   });
 
   const response = await course.save();
@@ -51,4 +87,4 @@ async function getcourseById(req, res) {
   });
 }
 
-module.exports = { createCourse, getCourses, getcourseById };
+module.exports = { getTeachers, createCourse, getCourses, getcourseById };

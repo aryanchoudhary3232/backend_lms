@@ -7,6 +7,7 @@ require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
+const studentRoutes = require("./routes/studentRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -20,7 +21,12 @@ mongoose
   .catch((err) => console.log("err in mongodb", err));
 
 app.use("/auth", authRoutes);
-app.use("/teacher/courses", teacherRoutes);
+
+//teacher routes
+app.use("/teacher", teacherRoutes);
+
+// student routes
+app.use("/student", studentRoutes);
 
 app.listen(3000, () => {
   console.log("backend server is running on port 3000....");

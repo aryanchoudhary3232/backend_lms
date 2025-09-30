@@ -1,4 +1,5 @@
-const User = require("../models/User");
+const Student = require("../models/Student");
+const Teacher = require("../models/Teacher");
 
 async function register(req, res) {
   const { name, email, password, role } = req.body;
@@ -11,18 +12,31 @@ async function register(req, res) {
     });
   }
 
-  const user = new User({
-    name,
-    email,
-    password,
-    role
-  });
+  let response;
+  if (role === "Student") {
+    const student = new Student({
+      name,
+      email,
+      password,
+      role,
+      
+    });
 
-  const response = await user.save();
+    response = await student.save();
+  } else if (role === "Teacher") {
+    const teacher = new Teacher({
+      name,
+      email,
+      password,
+      role,
+    });
+
+    response = await teacher.save();
+  }
 
   res.json({
     message: "User successfully registered",
-    data: user,
+    data: response,
     success: true,
     error: false,
   });
@@ -39,9 +53,10 @@ async function login(req, res) {
     });
   }
 
-  const user = await User.findOne({ email });
+  const student = await Student.findOne({ email });
+  const teacher = await Teacher.findOne({ email });
 
-  if (!user) {
+  if (!student && !teacher) {
     res.json({
       message: "User does not exist.",
       success: false,
@@ -49,20 +64,37 @@ async function login(req, res) {
     });
   }
 
-  if (user.password !== password) {
+  if (student) {
+    if (student.password !== password) {
+      res.json({
+        message: "password entered is wrong",
+        success: false,
+        error: true,
+      });
+    }
+
     res.json({
-      message: "password entered is wrong",
-      success: false,
-      error: true,
+      message: "login successfully",
+      data: student,
+      success: true,
+      error: false,
+    });
+  } else if (teacher) {
+    if (teacher.password !== password) {
+      res.json({
+        message: "password entered is wrong",
+        success: false,
+        error: true,
+      });
+    }
+
+    res.json({
+      message: "login successfully",
+      data: teacher,
+      success: true,
+      error: false,
     });
   }
-
-  res.json({
-    message: "login successfully",
-    data: user,
-    success: true,
-    error: false,
-  });
 }
 
 module.exports = { register, login };

@@ -9,6 +9,32 @@ const courseSchema = new mongoose.Schema({
   price: { type: Number },
   image: { type: String },
   video: { type: String },
+
+  teacher: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Teacher",
+  },
+
+  students: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
+    },
+  ],
+
+  chapters: [
+    {
+      title: {
+        type: String,
+      },
+      topics: [
+        {
+          title: String,
+          video: String,
+        },
+      ],
+    },
+  ],
 });
 
 const Course = mongoose.model("Course", courseSchema);

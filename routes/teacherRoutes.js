@@ -24,12 +24,19 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage });
 
+// teacher courses
 router.post(
-  "/create_course",
-  upload.fields([{ name: "image" }, { name: "video" }]),
+  "/courses/create_course",
+  upload.any(),
   teacherController.createCourse
 );
-router.get("/get_courses", teacherController.getCourses);
-router.get("/get_course_by_id/:courseId", teacherController.getcourseById);
+router.get("/courses/get_courses", teacherController.getCourses);
+router.get(
+  "/courses/get_course_by_id/:courseId",
+  teacherController.getcourseById
+);
+
+//teacher
+router.get("/", teacherController.getTeachers);
 
 module.exports = router;
