@@ -16,7 +16,7 @@ const storage = new CloudinaryStorage({
     }
 
     return {
-      folder: `${path.join(__dirname)}uploads`,
+      folder: "uploads",
       resource_type: resourceType,
     };
   },
