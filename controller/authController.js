@@ -1,5 +1,6 @@
 const Student = require("../models/Student");
 const Teacher = require("../models/Teacher");
+const Admin = require("../models/Admin");
 
 async function register(req, res) {
   const { name, email, password, role } = req.body;
@@ -53,14 +54,32 @@ async function login(req, res) {
     });
   }
 
+  const admin = await Admin.findOne({email});
   const student = await Student.findOne({ email });
   const teacher = await Teacher.findOne({ email });
 
-  if (!student && !teacher) {
+  if (!admin && !student && !teacher) {
     res.json({
       message: "User does not exist.",
       success: false,
       error: true,
+    });
+  }
+
+  if (admin) {
+    if (admin.password !== password) {
+      res.json({
+        message: "password entered is wrong",
+        success: false,
+        error: true,
+      });
+    }
+
+    res.json({
+      message: "login successfully",
+      data: admin,
+      success: true,
+      error: false,
     });
   }
 
@@ -87,7 +106,6 @@ async function login(req, res) {
         error: true,
       });
     }
-
     res.json({
       message: "login successfully",
       data: teacher,
