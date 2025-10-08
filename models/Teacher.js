@@ -15,7 +15,7 @@ const teacherSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["Student", "Teacher"],
+    enum: ["Teacher"],
     required: true,
   },
   courses: [

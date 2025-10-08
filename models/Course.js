@@ -31,6 +31,24 @@ const courseSchema = new mongoose.Schema({
         {
           title: String,
           video: String,
+          quiz: [
+            {
+              question: {
+                type: String,
+              },
+              options: [
+                {
+                  type: String,
+                },
+              ],
+              correctOption: {
+                type: String,
+              },
+              explaination: {
+                type: String,
+              },
+            },
+          ],
         },
       ],
     },

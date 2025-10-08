@@ -6,6 +6,7 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const cloudinary = require("../cloudinary");
 
 const teacherController = require("../controller/teacherController");
+const { verify } = require("../middleware/verify");
 
 const storage = new CloudinaryStorage({
   cloudinary,
@@ -16,7 +17,7 @@ const storage = new CloudinaryStorage({
     }
 
     return {
-      folder: `${path.join(__dirname)}uploads`,
+      folder: `uploads`,
       resource_type: resourceType,
     };
   },
@@ -27,6 +28,7 @@ const upload = multer({ storage });
 // teacher courses
 router.post(
   "/courses/create_course",
+  verify,
   upload.any(),
   teacherController.createCourse
 );

@@ -1,3 +1,5 @@
+const jwt = require("jsonwebtoken");
+
 const Student = require("../models/Student");
 const Teacher = require("../models/Teacher");
 
@@ -19,7 +21,6 @@ async function register(req, res) {
       email,
       password,
       role,
-      
     });
 
     response = await student.save();
@@ -73,9 +74,14 @@ async function login(req, res) {
       });
     }
 
+    const token = jwt.sign({ _id: student._id, role: "Student" }, "aryan123", {
+      expiresIn: "1d",
+    });
+
     res.json({
       message: "login successfully",
       data: student,
+      token: token,
       success: true,
       error: false,
     });
@@ -88,9 +94,14 @@ async function login(req, res) {
       });
     }
 
+    const token = jwt.sign({ _id: teacher._id, role: "Teacher" }, "aryan123", {
+      expiresIn: "1d",
+    });
+
     res.json({
       message: "login successfully",
       data: teacher,
+      token: token,
       success: true,
       error: false,
     });

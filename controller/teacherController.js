@@ -23,13 +23,12 @@ async function createCourse(req, res) {
 
   const imagePath = imageFile.path;
   const videoPath = videoFile.path;
-console.log('req.files',req.files)
+
   const newChapters = chapters.map((chapter, chapterIdx) => {
     return {
       title: chapter.title,
       topics: chapter.topics.map((topic, topicIdx) => {
         const fileKey = `chapters[${chapterIdx}][topics][${topicIdx}][video]`;
-        console.log('fileKey',fileKey)
 
         const topicVideoFile = req.files.find((f) => f.fieldname === fileKey);
         const topicVideoPath = topicVideoFile.path;
@@ -37,6 +36,7 @@ console.log('req.files',req.files)
         return {
           title: topic.title,
           video: topicVideoPath,
+          quiz: topic.quiz,
         };
       }),
     };
