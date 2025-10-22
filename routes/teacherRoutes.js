@@ -11,9 +11,12 @@ const { verify } = require("../middleware/verify");
 const storage = new CloudinaryStorage({
   cloudinary,
   params: (req, file) => {
+    // choose resource type based on mimetype; allow pdf as raw
     let resourceType = "image";
     if (file.mimetype.startsWith("video")) {
       resourceType = "video";
+    } else if (file.mimetype === "application/pdf") {
+      resourceType = "raw"; // store PDFs as raw in cloudinary
     }
 
     return {
