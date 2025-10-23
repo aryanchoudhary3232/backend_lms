@@ -7,7 +7,7 @@ function verify(req, res, next) {
       return res.json({ message: "Access denied..." });
     }
 
-    const token = authHeader.split[" "][1];
+    const token = authHeader.split(" ")[1];
 
     const payload = jwt.verify(token, "aryan123");
 

@@ -11,6 +11,7 @@ const studentRoutes = require("./routes/studentRoutes");
 
 app.use(cors());
 app.use(express.json());
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const MONGO_URL = process.env.MONGO_URL_ATLAS;
@@ -27,6 +28,10 @@ app.use("/teacher", teacherRoutes);
 
 // student routes
 app.use("/student", studentRoutes);
+
+app.get("/", (req, res) => {
+  res.send("Welcome to server");
+});
 
 app.listen(3000, () => {
   console.log("backend server is running on port 3000....");

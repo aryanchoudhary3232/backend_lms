@@ -55,7 +55,7 @@ async function login(req, res) {
     });
   }
 
-  const admin = await Admin.findOne({email});
+  const admin = await Admin.findOne({ email });
   const student = await Student.findOne({ email });
   const teacher = await Teacher.findOne({ email });
 
