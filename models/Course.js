@@ -9,6 +9,7 @@ const courseSchema = new mongoose.Schema({
   price: { type: Number },
   image: { type: String },
   video: { type: String },
+  notes: { type: String },
 
   teacher: {
     type: mongoose.Schema.Types.ObjectId,
