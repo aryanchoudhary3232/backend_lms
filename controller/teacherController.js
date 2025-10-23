@@ -20,9 +20,11 @@ async function createCourse(req, res) {
 
   const imageFile = req.files.find((f) => f.fieldname === "image");
   const videoFile = req.files.find((f) => f.fieldname === "video");
+  const notesFile = req.files.find((f) => f.fieldname === "notes");
 
   const imagePath = imageFile.path;
   const videoPath = videoFile.path;
+  const notesPath = notesFile ? notesFile.path : undefined;
 
   const newChapters = chapters.map((chapter, chapterIdx) => {
     return {
@@ -51,6 +53,7 @@ async function createCourse(req, res) {
     price,
     image: imagePath,
     video: videoPath,
+    notes: notesPath,
     teacher,
     chapters: newChapters,
   });
