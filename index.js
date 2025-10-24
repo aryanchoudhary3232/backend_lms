@@ -8,6 +8,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/authRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
 const studentRoutes = require("./routes/studentRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -21,6 +22,9 @@ mongoose
   .catch((err) => console.log("err in mongodb", err));
 
 app.use("/auth", authRoutes);
+
+// contact form
+app.use('/contact', contactRoutes);
 
 //teacher routes
 app.use("/teacher", teacherRoutes);
