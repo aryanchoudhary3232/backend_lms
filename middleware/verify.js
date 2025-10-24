@@ -9,6 +9,7 @@ function verify(req, res, next) {
       return res.status(401).json({ message: "Access denied, no token provided" });
     }
 
+    // ✅ Extract and verify token
     const token = authHeader.split(" ")[1]; // Correct extraction
     const payload = jwt.verify(token, "aryan123"); // Secret key
 
@@ -31,7 +32,7 @@ async function verifyAdmin(req, res, next) {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, "aryan123");
 
-    // Optional: check admin exists in DB
+    // ✅ Optional: Check admin exists in DB
     const admin = await Admin.findById(decoded._id);
     if (!admin || admin.role.toLowerCase() !== "admin") {
       return res.status(403).json({ message: "Access denied, Admins only" });
