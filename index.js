@@ -8,6 +8,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/authRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
 const studentRoutes = require("./routes/studentRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -28,6 +29,7 @@ app.use("/teacher", teacherRoutes);
 
 // student routes
 app.use("/student", studentRoutes);
+app.use("/admin",adminRoutes);
 
 app.get("/", (req, res) => {
   res.send("Welcome to server");
