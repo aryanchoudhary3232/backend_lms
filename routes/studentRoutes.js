@@ -13,6 +13,7 @@ router.get("/test", (req, res) => {
 
 // Student profile
 router.get("/", studentController.getStudents);
+router.post('/quiz_submit',verify, studentController.quizSubmission)
 
 // Course-related routes for students
 router.get("/courses", studentController.getAllCourses);

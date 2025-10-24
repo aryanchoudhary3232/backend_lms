@@ -80,7 +80,10 @@ async function getCourses(req, res) {
 }
 
 async function getcourseById(req, res) {
-  const course = await Course.findById(req.params.courseId);
+  const course = await Course.findById(req.params.courseId, {
+    'chapters.topics.quiz.correctOption': 0,
+    'chapters.topics.quiz.explaination': 0
+  });
 
   res.json({
     message: "Courses retrieved ",
