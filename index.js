@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 
 app.use(cors());
 app.use(express.json());
