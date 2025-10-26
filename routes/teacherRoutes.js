@@ -35,7 +35,9 @@ router.post(
   upload.any(),
   teacherController.createCourse
 );
+
 router.get("/courses/get_courses", teacherController.getCourses);
+
 router.get(
   "/courses/get_course_by_id/:courseId",
   teacherController.getcourseById
@@ -43,5 +45,8 @@ router.get(
 
 //teacher
 router.get("/", teacherController.getTeachers);
+
+//routes for dashboard metrics
+router.get("/metrics", verify, teacherController.getTeacherMetrics);
 
 module.exports = router;
