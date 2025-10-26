@@ -61,18 +61,19 @@ async function register(req, res) {
     console.error("Registration error:", error);
     res.status(500).json({
       message: "Server error during registration",
-  }
-
-  const admin = await Admin.findOne({ email });
-  const student = await Student.findOne({ email });
-  const teacher = await Teacher.findOne({ email });
-
-  if (!admin && !student && !teacher) {
-    res.json({
-      message: "User does not exist.",
-      success: false,
-      error: true,
     });
+
+    const admin = await Admin.findOne({ email });
+    const student = await Student.findOne({ email });
+    const teacher = await Teacher.findOne({ email });
+
+    if (!admin && !student && !teacher) {
+      res.json({
+        message: "User does not exist.",
+        success: false,
+        error: true,
+      });
+    }
   }
 }
 
