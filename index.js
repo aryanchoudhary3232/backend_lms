@@ -6,6 +6,7 @@ const path = require("path");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
+const courseRoutes = require('./routes/courseRoutes')
 const teacherRoutes = require("./routes/teacherRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const adminRoutes = require("./routes/adminRoutes");
@@ -30,12 +31,15 @@ mongoose
   });
 
 app.use("/auth", authRoutes);
+app.use('/courses', courseRoutes)
 
 //teacher routes
 app.use("/teacher", teacherRoutes);
 
 // student routes
 app.use("/student", studentRoutes);
+
+// admin routes
 app.use("/admin", adminRoutes);
 
 app.get("/", (req, res) => {
