@@ -85,9 +85,40 @@ const deleteCourse = async (req, res) => {
   }
 };
 
+// 📖 Get Course by ID for Admin
+const getCourseById = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    const course = await Course.findById(courseId)
+      .populate("teacher", "name email")
+      .populate("students", "name email");
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Course retrieved successfully",
+      data: course,
+    });
+  } catch (error) {
+    console.error("Course Detail Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching course details",
+    });
+  }
+};
+
 module.exports = {
   getDashboardData,
   getAllUsers,
   getAllCourses,
   deleteCourse,
+  getCourseById,
 };
