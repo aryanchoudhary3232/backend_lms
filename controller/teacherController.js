@@ -1,6 +1,8 @@
 const Course = require("../models/Course");
 const Teacher = require("../models/Teacher");
 const Order = require("../models/Order");
+const path = require("path");
+const { notFound } = require("../utils/respond");
 
 async function getTeachers(req, res) {
   const teachers = await Teacher.find().select("_id name");
@@ -240,4 +242,108 @@ function getRevenueByDay(orders, days) {
   }));
 }
 
-module.exports = { getTeachers, createCourse, getCourses, getcourseById, getTeacherMetrics };
+async function uploadQualification(req, res) {
+  try {
+    // ensure file present (multer puts it on req.file when using single)
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: true,
+        message: "No qualification file uploaded",
+      });
+    }
+
+    const { _id, role } = req.user;
+    if (role !== "Teacher") {
+      return res.status(403).json({
+        success: false,
+        error: true,
+        message: "Only teachers can upload qualification",
+      });
+    }
+
+    // Derive some metadata
+    const { path: url, filename: publicId, mimetype, size, originalname } = req.file;
+    const resourceType = mimetype.startsWith("video")
+      ? "video"
+      : mimetype.startsWith("image")
+      ? "image"
+      : "raw";
+    const format = (path.extname(originalname || "") || "").replace(".", "");
+
+    const update = {
+      qualificationDoc: {
+        url,
+        publicId,
+        resourceType,
+        format,
+        bytes: size,
+        uploadedAt: new Date(),
+      },
+      verificationStatus: "Pending",
+      verificationNotes: "",
+    };
+
+    const teacher = await Teacher.findByIdAndUpdate(_id, update, {
+      new: true,
+      select: "-password",
+    });
+
+    if (!teacher) {
+      return notFound(res, "Teacher");
+    }
+
+    return res.json({
+      success: true,
+      error: false,
+      message: "Qualification uploaded. Awaiting admin verification.",
+      data: {
+        verificationStatus: teacher.verificationStatus,
+        qualificationDoc: teacher.qualificationDoc,
+      },
+    });
+  } catch (error) {
+    console.error("uploadQualification error:", error);
+    return res.status(500).json({
+      success: false,
+      error: true,
+      message: "Server error while uploading qualification",
+    });
+  }
+}
+
+async function getQualificationStatus(req, res) {
+  try {
+    const { _id, role } = req.user;
+    if (role !== "Teacher") {
+      return res.status(403).json({
+        success: false,
+        error: true,
+        message: "Only teachers can access this resource",
+      });
+    }
+
+    const teacher = await Teacher.findById(_id)
+      .select("verificationStatus verificationNotes qualificationDoc name email");
+
+    if (!teacher) {
+      return notFound(res, "Teacher");
+    }
+
+    return res.json({
+      success: true,
+      error: false,
+      message: "Verification status retrieved",
+      data: teacher,
+    });
+  } catch (error) {
+    console.error("getQualificationStatus error:", error);
+    return res.status(500).json({
+      success: false,
+      error: true,
+      message: "Server error while fetching verification status",
+    });
+  }
+}
+
+module.exports = { getTeachers, createCourse, getCourses, getcourseById, uploadQualification, getQualificationStatus };

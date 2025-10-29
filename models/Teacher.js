@@ -18,6 +18,26 @@ const teacherSchema = new mongoose.Schema({
     enum: ["Teacher"],
     required: true,
   },
+  qualificationDoc: {
+    url: String,         
+    publicId: String,     
+    resourceType: String,   
+    format: String,        
+    bytes: Number,
+    uploadedAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  verificationStatus: {
+    type: String,
+    enum: ["NotSubmitted", "Pending", "Verified", "Rejected"],
+    default: "NotSubmitted",
+  },
+  verificationNotes: {
+    type: String,
+    default: "",
+  },
   courses: [
     {
       type: mongoose.Schema.Types.ObjectId,

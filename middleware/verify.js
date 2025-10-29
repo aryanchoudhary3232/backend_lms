@@ -46,4 +46,21 @@ async function verifyAdmin(req, res, next) {
   }
 }
 
-module.exports = { verify, verifyAdmin };
+// 🔹 Middleware to verify Teacher only
+function verifyTeacher(req, res, next) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Access denied, no user in request" });
+    }
+    if (req.user.role !== "Teacher") {
+      return res.status(403).json({ message: "Only teachers can access this resource" });
+    }
+    next();
+  } catch (error) {
+    console.error("Error in verifyTeacher middleware:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+
+module.exports = { verify, verifyAdmin, verifyTeacher };
