@@ -10,6 +10,7 @@ const courseRoutes = require('./routes/courseRoutes')
 const teacherRoutes = require("./routes/teacherRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -32,6 +33,9 @@ mongoose
 
 app.use("/auth", authRoutes);
 app.use('/courses', courseRoutes)
+
+// contact form
+app.use('/contact', contactRoutes);
 
 //teacher routes
 app.use("/teacher", teacherRoutes);
