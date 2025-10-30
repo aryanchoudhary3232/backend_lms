@@ -6,7 +6,7 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const cloudinary = require("../cloudinary");
 
 const teacherController = require("../controller/teacherController");
-const { verify } = require("../middleware/verify");
+const { verify, verifyTeacher } = require("../middleware/verify");
 
 const storage = new CloudinaryStorage({
   cloudinary,
@@ -35,6 +35,23 @@ router.post(
   upload.any(),
   teacherController.createCourse
 );
+
+// NEW: teacher qualification verification
+router.post(
+  "/verification/upload",
+  verify,
+  verifyTeacher,
+  upload.single("qualification"),
+  teacherController.uploadQualification
+);
+
+router.get(
+  "/verification/status",
+  verify,
+  verifyTeacher,
+  teacherController.getQualificationStatus
+);
+
 router.get("/courses/get_courses", teacherController.getCourses);
 router.get(
   "/courses/get_course_by_id/:courseId",
@@ -43,5 +60,8 @@ router.get(
 
 //teacher
 router.get("/", teacherController.getTeachers);
+
+//routes for dashboard metrics
+router.get("/metrics", verify, teacherController.getTeacherMetrics);
 
 module.exports = router;
