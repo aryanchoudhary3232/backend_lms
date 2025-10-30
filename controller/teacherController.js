@@ -346,4 +346,4 @@ async function getQualificationStatus(req, res) {
   }
 }
 
-module.exports = { getTeachers, createCourse, getCourses, getcourseById, uploadQualification, getQualificationStatus };
+module.exports = { getTeachers, createCourse, getCourses, getcourseById, uploadQualification, getQualificationStatus, getTeacherMetrics };
