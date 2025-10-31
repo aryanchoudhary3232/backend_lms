@@ -1,32 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
-const path = require("path");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const cloudinary = require("../cloudinary");
-
+const {upload} = require('../utils/multer')
 const teacherController = require("../controller/teacherController");
 const { verify, verifyTeacher } = require("../middleware/verify");
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: (req, file) => {
-    // choose resource type based on mimetype; allow pdf as raw
-    let resourceType = "image";
-    if (file.mimetype.startsWith("video")) {
-      resourceType = "video";
-    } else if (file.mimetype === "application/pdf") {
-      resourceType = "raw"; // store PDFs as raw in cloudinary
-    }
-
-    return {
-      folder: `uploads`,
-      resource_type: resourceType,
-    };
-  },
-});
-
-const upload = multer({ storage });
 
 // teacher courses
 router.post(

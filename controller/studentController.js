@@ -21,6 +21,20 @@ async function getStudents(req, res) {
   }
 }
 
+async function getCoursesByStudentId(req, res) {
+  const courses = await Course.find({ students: req.user._id }).populate({
+    path: 'teacher',
+    select: 'name'
+  })
+
+  res.json({
+    message: "Student courses retrieved successfully",
+    data: courses,
+    success: true,
+    error: false,
+  });
+}
+
 // Get all courses for students to browse
 async function getAllCourses(req, res) {
   try {
@@ -207,4 +221,5 @@ module.exports = {
   enrollInCourse,
   getEnrolledCourses,
   quizSubmission,
+  getCoursesByStudentId,
 };

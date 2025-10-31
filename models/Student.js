@@ -24,6 +24,16 @@ const studentSchema = new mongoose.Schema({
       ref: "Course",
     },
   ],
+  streak: {
+    type: Number,
+    default: 0,
+  },
+  lastActiveDateStreak: {
+    type: Date,
+  },
+  bestStreak: {
+    type: Number,
+  },
 });
 
 const Student = mongoose.model("Student", studentSchema);
