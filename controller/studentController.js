@@ -21,6 +21,20 @@ async function getStudents(req, res) {
   }
 }
 
+async function getCoursesByStudentId(req, res) {
+  const courses = await Course.find({ students: req.user._id }).populate({
+    path: 'teacher',
+    select: 'name'
+  })
+
+  res.json({
+    message: "Student courses retrieved successfully",
+    data: courses,
+    success: true,
+    error: false,
+  });
+}
+
 // Get all courses for students to browse
 async function getAllCourses(req, res) {
   try {
@@ -200,11 +214,57 @@ async function quizSubmission(req, res) {
   }
 }
 
+// Get all quiz submissions for the current student and aggregate by course
+async function getQuizSubmissions(req, res) {
+  try {
+    const studentId = req.user._id;
+
+    const submissions = await QuizSubmission.find({ studentId }).lean();
+
+    // Group by courseId
+    const grouped = {};
+    submissions.forEach((s) => {
+      const cid = s.courseId ? s.courseId.toString() : "unknown";
+      if (!grouped[cid]) grouped[cid] = [];
+      grouped[cid].push(s);
+    });
+
+    const courseIds = Object.keys(grouped).filter((id) => id !== "unknown");
+    const courses = await Course.find({ _id: { $in: courseIds } }).select("_id title");
+    const courseMap = {};
+    courses.forEach((c) => (courseMap[c._id.toString()] = c.title));
+
+    const perCourse = Object.entries(grouped).map(([courseId, subs]) => {
+      // compute average numeric score and latest score
+      const scores = subs.map((s) => parseInt((s.score || "0").toString().replace("%", "")) || 0);
+      const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+      const latest = subs.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))[0];
+
+      return {
+        courseId: courseId === "unknown" ? null : courseId,
+        courseTitle: courseMap[courseId] || null,
+        attempts: subs.length,
+        averageScore: `${avg}%`,
+        latestScore: latest ? latest.score : null,
+        lastAttemptAt: latest ? latest.submittedAt : null,
+      };
+    });
+
+    return res.json({ success: true, data: perCourse });
+  } catch (error) {
+    console.error("getQuizSubmissions error:", error);
+    return res.status(500).json({ success: false, message: "Could not fetch quiz submissions" });
+  }
+}
+
 module.exports = {
   getStudents,
   getAllCourses,
   getCourseById,
   enrollInCourse,
   getEnrolledCourses,
+  // new export for student quiz submissions
+  getQuizSubmissions,
   quizSubmission,
+  getCoursesByStudentId,
 };

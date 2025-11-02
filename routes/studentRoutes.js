@@ -15,6 +15,10 @@ router.get("/test", (req, res) => {
 router.get("/", studentController.getStudents);
 router.post('/quiz_submit',verify, studentController.quizSubmission)
 
+router.get('/courses',verify, studentController.getCoursesByStudentId)
+// Get student's quiz submissions (aggregated)
+router.get('/quiz-submissions', verify, studentController.getQuizSubmissions);
+
 // Course-related routes for students
 router.get("/courses", studentController.getAllCourses);
 router.get("/courses/:courseId", studentController.getCourseById);

@@ -11,6 +11,8 @@ const teacherRoutes = require("./routes/teacherRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
+const contactRoutes = require("./routes/contactRoutes");
+const cartRoutes = require("./routes/cartRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -33,6 +35,12 @@ mongoose
 
 app.use("/auth", authRoutes);
 app.use("/courses", courseRoutes);
+
+// contact form
+app.use('/contact', contactRoutes);
+
+// cart routes
+app.use('/cart', cartRoutes);
 
 //teacher routes
 app.use("/teacher", teacherRoutes);
