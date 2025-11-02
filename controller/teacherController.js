@@ -16,8 +16,8 @@ async function getTeachers(req, res) {
 }
 
 async function createCourse(req, res) {
-  const { title, description, category, level, duration, price, teacher } =
-    req.body;
+  const { title, description, category, level, duration, price } = req.body;
+  const teacher = req.user._id;
 
   let chapters = JSON.parse(req.body.chapters);
 

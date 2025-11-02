@@ -121,8 +121,7 @@ async function login(req, res) {
         role: user.role,
         email: user.email,
       },
-      "aryan123",
-      { expiresIn: "1d" }
+      "aryan123"
     );
 
     res.json({
