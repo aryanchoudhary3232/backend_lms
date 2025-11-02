@@ -84,8 +84,8 @@ async function getCourses(req, res) {
 
 async function getcourseById(req, res) {
   const course = await Course.findById(req.params.courseId, {
-    'chapters.topics.quiz.correctOption': 0,
-    'chapters.topics.quiz.explaination': 0
+    "chapters.topics.quiz.correctOption": 0,
+    "chapters.topics.quiz.explaination": 0,
   });
 
   res.json({
@@ -126,9 +126,7 @@ async function getTeacherMetrics(req, res) {
     const totalRevenue = completed.reduce((sum, o) => sum + (o.amount || 0), 0);
 
     const totalCustomers = new Set(
-      completed
-        .filter((o) => o.userId)
-        .map((o) => o.userId._id.toString())
+      completed.filter((o) => o.userId).map((o) => o.userId._id.toString())
     ).size;
 
     const now = new Date();
@@ -141,11 +139,20 @@ async function getTeacherMetrics(req, res) {
       (o) => o.createdAt && o.createdAt >= periodStart && o.createdAt <= now
     );
     const prevPeriod = completed.filter(
-      (o) => o.createdAt && o.createdAt >= prevPeriodStart && o.createdAt < periodStart
+      (o) =>
+        o.createdAt &&
+        o.createdAt >= prevPeriodStart &&
+        o.createdAt < periodStart
     );
 
-    const revenueCurrent = inPeriod.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const revenuePrevious = prevPeriod.reduce((sum, o) => sum + (o.amount || 0), 0);
+    const revenueCurrent = inPeriod.reduce(
+      (sum, o) => sum + (o.amount || 0),
+      0
+    );
+    const revenuePrevious = prevPeriod.reduce(
+      (sum, o) => sum + (o.amount || 0),
+      0
+    );
     const revenueGrowthRate = percentChange(revenueCurrent, revenuePrevious);
 
     const customersCurrent = new Set(
@@ -154,7 +161,10 @@ async function getTeacherMetrics(req, res) {
     const customersPrevious = new Set(
       prevPeriod.filter((o) => o.userId).map((o) => o.userId._id.toString())
     ).size;
-    const customerGrowthRate = percentChange(customersCurrent, customersPrevious);
+    const customerGrowthRate = percentChange(
+      customersCurrent,
+      customersPrevious
+    );
 
     const byUser = new Map();
     completed
@@ -164,19 +174,24 @@ async function getTeacherMetrics(req, res) {
         const uid = o.userId._id.toString();
         if (!byUser.has(uid)) byUser.set(uid, new Date(o.createdAt));
       });
-    
+
     let newCustomers = 0;
     for (const firstDate of byUser.values()) {
       if (firstDate >= periodStart && firstDate <= now) newCustomers++;
     }
 
     // Get course stats for table
-    const courseStats = teachersCourses.map(course => {
-      const courseOrders = completed.filter(o => 
-        o.courseId._id.toString() === course._id.toString()
+    const courseStats = teachersCourses.map((course) => {
+      const courseOrders = completed.filter(
+        (o) => o.courseId._id.toString() === course._id.toString()
       );
-      const courseRevenue = courseOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-      const enrollments = new Set(courseOrders.map(o => o.userId._id.toString())).size;
+      const courseRevenue = courseOrders.reduce(
+        (sum, o) => sum + (o.amount || 0),
+        0
+      );
+      const enrollments = new Set(
+        courseOrders.map((o) => o.userId._id.toString())
+      ).size;
 
       return {
         id: course._id,
@@ -219,26 +234,26 @@ async function getTeacherMetrics(req, res) {
 function getRevenueByDay(orders, days) {
   const dailyRevenue = new Map();
   const now = new Date();
-  
+
   // Initialize all days with 0
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
-    const dateKey = date.toISOString().split('T')[0];
+    const dateKey = date.toISOString().split("T")[0];
     dailyRevenue.set(dateKey, 0);
   }
-  
+
   // Add revenue for each order
-  orders.forEach(order => {
-    const dateKey = new Date(order.createdAt).toISOString().split('T')[0];
+  orders.forEach((order) => {
+    const dateKey = new Date(order.createdAt).toISOString().split("T")[0];
     if (dailyRevenue.has(dateKey)) {
       dailyRevenue.set(dateKey, dailyRevenue.get(dateKey) + order.amount);
     }
   });
-  
+
   return Array.from(dailyRevenue.entries()).map(([date, revenue]) => ({
     date,
-    revenue
+    revenue,
   }));
 }
 
@@ -263,7 +278,13 @@ async function uploadQualification(req, res) {
     }
 
     // Derive some metadata
-    const { path: url, filename: publicId, mimetype, size, originalname } = req.file;
+    const {
+      path: url,
+      filename: publicId,
+      mimetype,
+      size,
+      originalname,
+    } = req.file;
     const resourceType = mimetype.startsWith("video")
       ? "video"
       : mimetype.startsWith("image")
@@ -323,8 +344,9 @@ async function getQualificationStatus(req, res) {
       });
     }
 
-    const teacher = await Teacher.findById(_id)
-      .select("verificationStatus verificationNotes qualificationDoc name email");
+    const teacher = await Teacher.findById(_id).select(
+      "verificationStatus verificationNotes qualificationDoc name email"
+    );
 
     if (!teacher) {
       return notFound(res, "Teacher");
@@ -346,4 +368,12 @@ async function getQualificationStatus(req, res) {
   }
 }
 
-module.exports = { getTeachers, createCourse, getCourses, getcourseById, uploadQualification, getQualificationStatus, getTeacherMetrics };
+module.exports = {
+  getTeachers,
+  createCourse,
+  getCourses,
+  getcourseById,
+  uploadQualification,
+  getQualificationStatus,
+  getTeacherMetrics,
+};
