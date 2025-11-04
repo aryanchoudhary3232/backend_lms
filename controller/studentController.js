@@ -68,7 +68,7 @@ async function updateEnrollCourses(req, res) {
     });
   } catch (error) {
     console.log("err occured...", error);
-    es.json({
+    res.json({
       message: error?.message || error,
       success: false,
       error: true,
@@ -322,6 +322,51 @@ async function getQuizSubmissions(req, res) {
   }
 }
 
+// Get streak and simple activity analytics for current student
+async function getStreakStats(req, res) {
+  try {
+    const studentId = req.user._id;
+
+    const student = await Student.findById(studentId).select(
+      "streak bestStreak lastActiveDateStreak"
+    );
+
+    // Count unique dates when the student submitted quizzes
+    const submissions = await QuizSubmission.find({ studentId }).select(
+      "submittedAt"
+    );
+
+    const uniqueQuizDates = new Set();
+    submissions.forEach((s) => {
+      const d = new Date(s.submittedAt);
+      // ISO date (YYYY-MM-DD) to dedupe per-day
+      uniqueQuizDates.add(d.toISOString().slice(0, 10));
+    });
+
+    const quizDays = uniqueQuizDates.size;
+
+    // For active days we currently approximate using quizDays.
+    // If you track other activity timestamps later (logins, page views), combine them here.
+    const activeDays = quizDays;
+
+    return res.json({
+      success: true,
+      data: {
+        currentStreak: student?.streak || 0,
+        bestStreak: student?.bestStreak || 0,
+        lastActiveDate: student?.lastActiveDateStreak || null,
+        quizDays,
+        activeDays,
+      },
+    });
+  } catch (error) {
+    console.error("getStreakStats error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Could not fetch streak stats" });
+  }
+}
+
 module.exports = {
   getStudents,
   studentProfile,
@@ -333,4 +378,6 @@ module.exports = {
   quizSubmission,
   getCoursesByStudentId,
   updateEnrollCourses,
+  // Streak / analytics for a student
+  getStreakStats,
 };

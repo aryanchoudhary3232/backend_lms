@@ -21,6 +21,9 @@ router.get('/courses',verify, studentController.getCoursesByStudentId)
 // Get student's quiz submissions (aggregated)
 router.get('/quiz-submissions', verify, studentController.getQuizSubmissions);
 
+// Streak / activity analytics
+router.get('/streak', verify, studentController.getStreakStats);
+
 // Course-related routes for students
 router.get("/courses", studentController.getAllCourses);
 router.get("/courses/:courseId", studentController.getCourseById);
