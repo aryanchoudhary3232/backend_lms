@@ -63,6 +63,12 @@ async function createCourse(req, res) {
 
   const response = await course.save();
 
+  await Teacher.findByIdAndUpdate(teacher, {
+    $push: {
+      courses: response._id,
+    },
+  });
+
   res.json({
     message: "Course created succesfully",
     data: response,

@@ -9,4 +9,6 @@ router.post("/add/:courseId", verify, cartController.addToCart);
 router.delete("/remove/:courseId", verify, cartController.removeFromCart);
 router.delete("/clear", verify, cartController.clearCart);
 
+router.put('/update-enroll-courses', verify, cartController.updateEnrollCourses)
+
 module.exports = router;
