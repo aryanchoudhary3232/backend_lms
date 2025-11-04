@@ -13,6 +13,8 @@ router.get("/test", (req, res) => {
 
 // Student profile
 router.get("/", studentController.getStudents);
+router.get('/profile', verify, studentController.studentProfile)
+router.put('/update-enrollCourses',verify, studentController.updateEnrollCourses)
 router.post('/quiz_submit',verify, studentController.quizSubmission)
 
 router.get('/courses',verify, studentController.getCoursesByStudentId)

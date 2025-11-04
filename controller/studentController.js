@@ -21,11 +21,66 @@ async function getStudents(req, res) {
   }
 }
 
+async function studentProfile(req, res) {
+  try {
+    const studentId = req.user._id;
+    const student = await Student.findById(studentId).select("_id");
+
+    res.json({
+      message: "Student courses retrieved successfully",
+      data: student,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.log("err occured...", error);
+    res.json({
+      message: error?.message || error,
+      success: false,
+      error: true,
+    });
+  }
+}
+
+async function updateEnrollCourses(req, res) {
+  console.log(req.body);
+  const { courseIds } = req.body;
+  console.log(courseIds);
+  const studentId = req.user._id;
+  try {
+    const students = await Student.findByIdAndUpdate(
+      studentId,
+      {
+        $addToSet: {
+          enrolledCourses: {
+            $each: courseIds,
+          },
+        },
+      },
+      { new: true }
+    );
+
+    res.json({
+      message: "Student courses retrieved successfully",
+      data: students,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.log("err occured...", error);
+    es.json({
+      message: error?.message || error,
+      success: false,
+      error: true,
+    });
+  }
+}
+
 async function getCoursesByStudentId(req, res) {
   const courses = await Course.find({ students: req.user._id }).populate({
-    path: 'teacher',
-    select: 'name'
-  })
+    path: "teacher",
+    select: "name",
+  });
 
   res.json({
     message: "Student courses retrieved successfully",
@@ -230,15 +285,23 @@ async function getQuizSubmissions(req, res) {
     });
 
     const courseIds = Object.keys(grouped).filter((id) => id !== "unknown");
-    const courses = await Course.find({ _id: { $in: courseIds } }).select("_id title");
+    const courses = await Course.find({ _id: { $in: courseIds } }).select(
+      "_id title"
+    );
     const courseMap = {};
     courses.forEach((c) => (courseMap[c._id.toString()] = c.title));
 
     const perCourse = Object.entries(grouped).map(([courseId, subs]) => {
       // compute average numeric score and latest score
-      const scores = subs.map((s) => parseInt((s.score || "0").toString().replace("%", "")) || 0);
-      const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-      const latest = subs.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))[0];
+      const scores = subs.map(
+        (s) => parseInt((s.score || "0").toString().replace("%", "")) || 0
+      );
+      const avg = scores.length
+        ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+        : 0;
+      const latest = subs.sort(
+        (a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)
+      )[0];
 
       return {
         courseId: courseId === "unknown" ? null : courseId,
@@ -253,18 +316,21 @@ async function getQuizSubmissions(req, res) {
     return res.json({ success: true, data: perCourse });
   } catch (error) {
     console.error("getQuizSubmissions error:", error);
-    return res.status(500).json({ success: false, message: "Could not fetch quiz submissions" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Could not fetch quiz submissions" });
   }
 }
 
 module.exports = {
   getStudents,
+  studentProfile,
   getAllCourses,
   getCourseById,
   enrollInCourse,
   getEnrolledCourses,
-  // new export for student quiz submissions
   getQuizSubmissions,
   quizSubmission,
   getCoursesByStudentId,
+  updateEnrollCourses,
 };
