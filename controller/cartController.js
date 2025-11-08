@@ -203,7 +203,7 @@ async function updateEnrollCourses(req, res) {
     });
   } catch (error) {
     console.log("err occured...", error);
-    es.json({
+    res.json({
       message: error?.message || error,
       success: false,
       error: true,
