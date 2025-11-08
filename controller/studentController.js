@@ -127,9 +127,16 @@ async function getCourseById(req, res) {
       });
     }
 
+    // compute rating summary
+    const ratings = course.ratings || [];
+    const ratingCount = ratings.length;
+    const avg = ratingCount
+      ? Math.round((ratings.reduce((s, r) => s + (r.rating || 0), 0) / ratingCount) * 10) / 10
+      : 0;
+
     res.json({
       message: "Course retrieved successfully",
-      data: course,
+      data: { ...course.toObject(), rating: { average: avg, count: ratingCount } },
       success: true,
       error: false,
     });

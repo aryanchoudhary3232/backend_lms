@@ -23,6 +23,16 @@ const courseSchema = new mongoose.Schema({
     },
   ],
 
+  // Ratings array: students can rate courses they purchased/enrolled
+  ratings: [
+    {
+      student: { type: mongoose.Schema.Types.ObjectId, ref: "Student" },
+      rating: { type: Number },
+      review: { type: String },
+      createdAt: { type: Date, default: Date.now },
+    },
+  ],
+
   chapters: [
     {
       title: {
