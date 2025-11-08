@@ -6,10 +6,11 @@ const path = require("path");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
-const courseRoutes = require('./routes/courseRoutes')
+const courseRoutes = require("./routes/courseRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const assignmentRoutes = require("./routes/assignmentRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 
@@ -33,7 +34,7 @@ mongoose
   });
 
 app.use("/auth", authRoutes);
-app.use('/courses', courseRoutes)
+app.use("/courses", courseRoutes);
 
 // contact form
 app.use('/contact', contactRoutes);
@@ -49,6 +50,9 @@ app.use("/student", studentRoutes);
 
 // admin routes
 app.use("/admin", adminRoutes);
+
+// assignment routes
+app.use("/assignments", assignmentRoutes);
 
 app.get("/", (req, res) => {
   res.send("Welcome to server");
