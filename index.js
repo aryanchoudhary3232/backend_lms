@@ -13,6 +13,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const cartRoutes = require("./routes/cartRoutes");
+const flashcardRoutes = require('./routes/flashcardRoutes');
 
 app.use(cors());
 app.use(express.json());
@@ -53,6 +54,9 @@ app.use("/admin", adminRoutes);
 
 // assignment routes
 app.use("/assignments", assignmentRoutes);
+
+// flashcard routes
+app.use('/api/flashcards', flashcardRoutes);
 
 app.get("/", (req, res) => {
   res.send("Welcome to server");
