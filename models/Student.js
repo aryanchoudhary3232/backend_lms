@@ -34,6 +34,19 @@ const studentSchema = new mongoose.Schema({
   bestStreak: {
     type: Number,
   },
+
+  studentProgress: [
+    {
+      date: {
+        type: Date,
+        required: true,
+      },
+      minutes: {
+        type: Number,
+        default: 0,
+      },
+    },
+  ],
 });
 
 const Student = mongoose.model("Student", studentSchema);
