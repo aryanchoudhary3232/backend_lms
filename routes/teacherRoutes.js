@@ -21,12 +21,15 @@ router.post(
   teacherController.uploadQualification
 );
 
-router.get(
-  "/verification/status",
+
+router.get("/verification/status",
   verify,
   verifyTeacher,
   teacherController.getQualificationStatus
 );
+
+// Get teacher-specific courses
+router.get("/courses", verify, verifyTeacher, teacherController.getTeacherCourses);
 
 router.get("/courses/get_courses", teacherController.getCourses);
 router.get(
