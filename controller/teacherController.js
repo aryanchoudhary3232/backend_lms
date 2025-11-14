@@ -88,6 +88,18 @@ async function getCourses(req, res) {
   });
 }
 
+async function getTeacherCourses(req, res) {
+  const teacherId = req.user._id;
+  const courses = await Course.find({ teacher: teacherId });
+
+  res.json({
+    message: "Teacher courses retrieved",
+    data: courses,
+    success: true,
+    error: false,
+  });
+}
+
 async function getcourseById(req, res) {
   const course = await Course.findById(req.params.courseId, {
     "chapters.topics.quiz.correctOption": 0,
@@ -378,6 +390,7 @@ module.exports = {
   getTeachers,
   createCourse,
   getCourses,
+  getTeacherCourses,
   getcourseById,
   uploadQualification,
   getQualificationStatus,

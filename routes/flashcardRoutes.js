@@ -1,20 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const flashcardController = require('../controller/flashcardController');
-const { verify } = require('../middleware/verify');
+const verify = require('../middleware/verify');
+const flashcard = require('../controller/flashcardController');
 
-// Teacher routes
-router.post('/create', verify, flashcardController.createFlashcardDeck);
-router.post('/:deckId/cards', verify, flashcardController.addCards);
-router.put('/:deckId/cards/:cardId', verify, flashcardController.editCard);
-router.delete('/:deckId/cards/:cardId', verify, flashcardController.deleteCard);
-router.put('/:deckId/publish', verify, flashcardController.publishDeck);
-router.get('/teacher/decks', verify, flashcardController.getTeacherDecks);
-router.get('/:deckId/details', verify, flashcardController.getDeckDetails);
-router.delete('/:deckId', verify, flashcardController.deleteDeck);
+// teacher-owned deck APIs
+router.get('/teacher/decks', verify.verify, verify.verifyTeacher, flashcard.getTeacherDecks);
+router.post('/create', verify.verify, verify.verifyTeacher, flashcard.createFlashcardDeck);
+router.get('/:deckId/details', verify.verify, verify.verifyTeacher, flashcard.getDeckDetails);
+router.delete('/:deckId', verify.verify, verify.verifyTeacher, flashcard.deleteDeck);
 
-// Student routes (public)
-router.get('/course/:courseId', flashcardController.getCourseDecks);
-router.get('/:deckId/study', flashcardController.getStudyDeck);
+router.post('/:deckId/cards', verify.verify, verify.verifyTeacher, flashcard.addCards);
+router.put('/:deckId/cards/:cardId', verify.verify, verify.verifyTeacher, flashcard.editCard);
+router.delete('/:deckId/cards/:cardId', verify.verify, verify.verifyTeacher, flashcard.deleteCard);
+
+router.post('/:deckId/publish', verify.verify, verify.verifyTeacher, flashcard.publishDeck);
+router.put('/:deckId/publish', verify.verify, verify.verifyTeacher, flashcard.publishDeck);
 
 module.exports = router;

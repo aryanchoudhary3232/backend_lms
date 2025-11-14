@@ -2,31 +2,67 @@ const Flashcard = require('../models/Flashcard');
 const Course = require('../models/Course');
 const { respond } = require('../utils/respond');
 
-// Create flashcard deck
+// Get teacher's decks
+exports.getTeacherDecks = async (req, res) => {
+  try {
+    const teacherId = req.user?._id; // ensure verify sets this
+    if (!teacherId) return respond(res, 401, false, 'Unauthorized');
+
+    const decks = await Flashcard.find({ createdBy: teacherId })
+      .populate('courseId', 'title') // Course has 'title'
+      .select('-cards');             // list view: omit heavy cards
+
+    return respond(res, 200, true, 'Decks retrieved', decks);
+  } catch (error) {
+    return respond(res, 500, false, error.message);
+  }
+};
+
+// Create deck (ownership via Course.teacher)
 exports.createFlashcardDeck = async (req, res) => {
   try {
-    const { courseId, title, description, cards, visibility } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user?._id;
+    if (!teacherId) return respond(res, 401, false, 'Unauthorized');
 
-    // Verify teacher owns the course
-    const course = await Course.findById(courseId);
-    if (!course || course.instructor.toString() !== teacherId) {
+    const { courseId, title, description, cards = [], visibility = 'private' } = req.body;
+
+    const course = await Course.findById(courseId).select('teacher title');
+    if (!course) return respond(res, 404, false, 'Course not found');
+    if (String(course.teacher) !== String(teacherId)) {
       return respond(res, 403, false, 'Not authorized to create flashcards for this course');
     }
 
-    const flashcard = new Flashcard({
+    const deck = await Flashcard.create({
       courseId,
       createdBy: teacherId,
       title,
       description,
-      cards: cards || [],
-      visibility: visibility || 'private'
+      cards,
+      visibility
     });
 
-    await flashcard.save();
-    respond(res, 201, true, 'Flashcard deck created', flashcard);
+    return respond(res, 201, true, 'Flashcard deck created', deck);
   } catch (error) {
-    respond(res, 500, false, error.message);
+    return respond(res, 500, false, error.message);
+  }
+};
+
+// Get full deck with cards for editing
+exports.getDeckDetails = async (req, res) => {
+  try {
+    const teacherId = req.user?._id;
+    if (!teacherId) return respond(res, 401, false, 'Unauthorized');
+
+    const { deckId } = req.params;
+    const deck = await Flashcard.findById(deckId).populate('courseId', 'title');
+    if (!deck) return respond(res, 404, false, 'Deck not found');
+    if (String(deck.createdBy) !== String(teacherId)) {
+      return respond(res, 403, false, 'Not authorized');
+    }
+
+    return respond(res, 200, true, 'Deck retrieved', deck);
+  } catch (error) {
+    return respond(res, 500, false, error.message);
   }
 };
 
@@ -35,10 +71,10 @@ exports.addCards = async (req, res) => {
   try {
     const { deckId } = req.params;
     const { cards } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user._id; // FIX
 
     const flashcard = await Flashcard.findById(deckId);
-    if (!flashcard || flashcard.createdBy.toString() !== teacherId) {
+    if (!flashcard || flashcard.createdBy.toString() !== String(teacherId)) {
       return respond(res, 403, false, 'Not authorized');
     }
 
@@ -61,10 +97,10 @@ exports.editCard = async (req, res) => {
   try {
     const { deckId, cardId } = req.params;
     const { question, answer, clozeText, hints, difficulty, tags, lectureTimestamp } = req.body;
-    const teacherId = req.user.id;
+    const teacherId = req.user._id; // FIX
 
     const flashcard = await Flashcard.findById(deckId);
-    if (!flashcard || flashcard.createdBy.toString() !== teacherId) {
+    if (!flashcard || flashcard.createdBy.toString() !== String(teacherId)) {
       return respond(res, 403, false, 'Not authorized');
     }
 
@@ -78,13 +114,13 @@ exports.editCard = async (req, res) => {
     }
 
     Object.assign(card, {
-      question: question || card.question,
-      answer: answer || card.answer,
-      clozeText: clozeText || card.clozeText,
-      hints: hints || card.hints,
-      difficulty: difficulty || card.difficulty,
-      tags: tags || card.tags,
-      lectureTimestamp: lectureTimestamp || card.lectureTimestamp
+      question: question ?? card.question,
+      answer: answer ?? card.answer,
+      clozeText: clozeText ?? card.clozeText,
+      hints: hints ?? card.hints,
+      difficulty: difficulty ?? card.difficulty,
+      tags: tags ?? card.tags,
+      lectureTimestamp: lectureTimestamp ?? card.lectureTimestamp
     });
 
     flashcard.updatedAt = new Date();
@@ -100,10 +136,10 @@ exports.editCard = async (req, res) => {
 exports.deleteCard = async (req, res) => {
   try {
     const { deckId, cardId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user._id; // FIX
 
     const flashcard = await Flashcard.findById(deckId);
-    if (!flashcard || flashcard.createdBy.toString() !== teacherId) {
+    if (!flashcard || flashcard.createdBy.toString() !== String(teacherId)) {
       return respond(res, 403, false, 'Not authorized');
     }
 
@@ -111,7 +147,12 @@ exports.deleteCard = async (req, res) => {
       return respond(res, 400, false, 'Cannot edit published decks');
     }
 
-    flashcard.cards.id(cardId).deleteOne();
+    const card = flashcard.cards.id(cardId);
+    if (!card) {
+      return respond(res, 404, false, 'Card not found');
+    }
+    card.deleteOne();
+
     flashcard.updatedAt = new Date();
     await flashcard.save();
 
@@ -125,10 +166,10 @@ exports.deleteCard = async (req, res) => {
 exports.publishDeck = async (req, res) => {
   try {
     const { deckId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user._id; // FIX
 
     const flashcard = await Flashcard.findById(deckId);
-    if (!flashcard || flashcard.createdBy.toString() !== teacherId) {
+    if (!flashcard || flashcard.createdBy.toString() !== String(teacherId)) {
       return respond(res, 403, false, 'Not authorized');
     }
 
@@ -141,38 +182,6 @@ exports.publishDeck = async (req, res) => {
     await flashcard.save();
 
     respond(res, 200, true, 'Deck published', flashcard);
-  } catch (error) {
-    respond(res, 500, false, error.message);
-  }
-};
-
-// Get teacher's decks
-exports.getTeacherDecks = async (req, res) => {
-  try {
-    const teacherId = req.user.id;
-
-    const decks = await Flashcard.find({ createdBy: teacherId })
-      .populate('courseId', 'name')
-      .select('-cards');
-
-    respond(res, 200, true, 'Decks retrieved', decks);
-  } catch (error) {
-    respond(res, 500, false, error.message);
-  }
-};
-
-// Get deck details (for editing)
-exports.getDeckDetails = async (req, res) => {
-  try {
-    const { deckId } = req.params;
-    const teacherId = req.user.id;
-
-    const flashcard = await Flashcard.findById(deckId).populate('courseId');
-    if (!flashcard || flashcard.createdBy.toString() !== teacherId) {
-      return respond(res, 403, false, 'Not authorized');
-    }
-
-    respond(res, 200, true, 'Deck retrieved', flashcard);
   } catch (error) {
     respond(res, 500, false, error.message);
   }
@@ -216,10 +225,10 @@ exports.getStudyDeck = async (req, res) => {
 exports.deleteDeck = async (req, res) => {
   try {
     const { deckId } = req.params;
-    const teacherId = req.user.id;
+    const teacherId = req.user._id; // FIX
 
     const flashcard = await Flashcard.findById(deckId);
-    if (!flashcard || flashcard.createdBy.toString() !== teacherId) {
+    if (!flashcard || flashcard.createdBy.toString() !== String(teacherId)) {
       return respond(res, 403, false, 'Not authorized');
     }
 
