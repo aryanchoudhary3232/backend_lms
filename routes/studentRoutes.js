@@ -36,4 +36,8 @@ router.post(
 );
 router.get("/enrolled-courses", verify, studentController.getEnrolledCourses);
 
+//student progress
+router.post('/progress', verify, studentController.studentProgress)
+router.get('/get-progress', verify, studentController.getStudentProgress)
+
 module.exports = router;
