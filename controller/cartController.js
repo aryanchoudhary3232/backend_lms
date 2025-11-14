@@ -46,6 +46,15 @@ async function addToCart(req, res) {
       });
     }
 
+    // Prevent duplicate purchases
+    const student = await Student.findById(studentId).select("enrolledCourses");
+    if (student?.enrolledCourses?.some((id) => id.toString() === courseId.toString())) {
+      return res.status(400).json({
+        success: false,
+        message: "You already own this course",
+      });
+    }
+
     // Find or create cart
     let cart = await Cart.findOne({ student: studentId });
     if (!cart) {
@@ -161,50 +170,81 @@ async function clearCart(req, res) {
 }
 
 async function updateEnrollCourses(req, res) {
-  console.log(req.body);
-  const { courseIds } = req.body;
-  console.log(courseIds);
+  const { courseIds } = req.body || {};
   const studentId = req.user._id;
+
+  if (!Array.isArray(courseIds) || courseIds.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: true,
+      message: "No courses supplied for enrollment",
+    });
+  }
+
   try {
-    const students = await Student.findByIdAndUpdate(
+    const uniqueCourseIds = [...new Set(courseIds.map((id) => id?.toString()))].filter(Boolean);
+
+    if (uniqueCourseIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: true,
+        message: "Invalid course identifiers provided",
+      });
+    }
+
+    await Student.findByIdAndUpdate(
       studentId,
       {
         $addToSet: {
           enrolledCourses: {
-            $each: courseIds,
+            $each: uniqueCourseIds,
           },
         },
       },
       { new: true }
     );
 
-    const updatedCart = await Cart.updateOne(
-      { student: studentId },
+    await Course.updateMany(
+      { _id: { $in: uniqueCourseIds } },
       {
-        $set: { items: [] },
+        $addToSet: { students: studentId },
       }
     );
 
-    await Promise.all(
-      courseIds.map((courseId) =>
-        Course.findByIdAndUpdate(courseId, {
-          $push: {
-            students: studentId,
-          },
-        })
-      )
-    );
+    const updatedStudent = await Student.findById(studentId)
+      .select("name email enrolledCourses")
+      .populate({
+        path: "enrolledCourses",
+        select: "title price image category level teacher",
+        populate: { path: "teacher", select: "name" },
+      });
+
+    let clearedCart = await Cart.findOneAndUpdate(
+      { student: studentId },
+      { $set: { items: [] } },
+      { new: true }
+    ).populate({
+      path: "items.course",
+      select: "title description price image",
+    });
+
+    if (!clearedCart) {
+      clearedCart = { items: [] };
+    }
 
     res.json({
-      message: "Student courses retrieved successfully",
-      data: updatedCart,
       success: true,
       error: false,
+      message: "Enrollment completed successfully",
+      data: {
+        cart: clearedCart,
+        enrolledCourses: updatedStudent?.enrolledCourses || [],
+      },
     });
   } catch (error) {
     console.log("err occured...", error);
-    res.json({
-      message: error?.message || error,
+    res.status(500).json({
+      message: error?.message || "Could not complete enrollment",
       success: false,
       error: true,
     });

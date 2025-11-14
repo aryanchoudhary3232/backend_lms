@@ -1,7 +1,6 @@
 const Student = require("../models/Student");
 const QuizSubmission = require("../models/QuizSubmission");
 const Course = require("../models/Course");
-const { data } = require("react-router-dom");
 
 async function getStudents(req, res) {
   try {
@@ -25,20 +24,22 @@ async function getStudents(req, res) {
 async function studentProfile(req, res) {
   try {
     const studentId = req.user._id;
-    const student = await Student.findById(studentId).populate({
-      path: 'enrolledCourses',
-      select: 'title image'
-    })
+    const student = await Student.findById(studentId)
+      .select("_id name email enrolledCourses")
+      .populate({
+        path: "enrolledCourses",
+        select: "title image price category level",
+      });
 
     res.json({
-      message: "Student courses retrieved successfully",
+      message: "Student profile retrieved successfully",
       data: student,
       success: true,
       error: false,
     });
   } catch (error) {
     console.log("err occured...", error);
-    res.json({
+    res.status(500).json({
       message: error?.message || error,
       success: false,
       error: true,
