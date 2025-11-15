@@ -12,6 +12,8 @@ router.post(
   teacherController.createCourse
 );
 
+router.get('/courses',verify, teacherController.getTeacherCourses)
+
 // NEW: teacher qualification verification
 router.post(
   "/verification/upload",
@@ -34,10 +36,15 @@ router.get(
   teacherController.getcourseById
 );
 
+
+
 //teacher
 router.get("/", teacherController.getTeachers);
 
 //routes for dashboard metrics
 router.get("/metrics", verify, teacherController.getTeacherMetrics);
+
+router.get('/students',verify, teacherController.getEnrolledStudents)
+router.get('/dashboard', verify, teacherController.getTeacherDashboard)
 
 module.exports = router;
