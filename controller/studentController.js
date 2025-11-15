@@ -24,12 +24,10 @@ async function getStudents(req, res) {
 async function studentProfile(req, res) {
   try {
     const studentId = req.user._id;
-    const student = await Student.findById(studentId)
-      .select("_id name email enrolledCourses")
-      .populate({
-        path: "enrolledCourses",
-        select: "title image price category level",
-      });
+    const student = await Student.findById(studentId).populate({
+      path: "enrolledCourses",
+      select: "title image price category level",
+    });
 
     res.json({
       message: "Student profile retrieved successfully",
@@ -374,7 +372,7 @@ async function getStreakStats(req, res) {
 
 async function studentProgress(req, res) {
   try {
-    console.log(req.body)
+    console.log(req.body);
     const { minutes } = req.body;
     const studentId = req.user._id;
     const student = await Student.findById(studentId);
@@ -384,10 +382,10 @@ async function studentProgress(req, res) {
       (sp) => sp.date.toISOString().split("T")[0] === today
     );
     if (todayStudentProgress) {
-      console.log('todayStudentProgress.minutes')
+      console.log("todayStudentProgress.minutes");
       todayStudentProgress.minutes += minutes;
     } else {
-      console.log('todayStudentProgress.minutes')
+      console.log("todayStudentProgress.minutes");
       student.studentProgress.push({ date: new Date(today), minutes: minutes });
     }
 
