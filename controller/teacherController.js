@@ -1,8 +1,10 @@
 const Course = require("../models/Course");
 const Teacher = require("../models/Teacher");
+const Student = require("../models/Student");
 const Order = require("../models/Order");
 const path = require("path");
 const { notFound } = require("../utils/respond");
+const mongoose = require('mongoose')
 
 async function getTeachers(req, res) {
   const teachers = await Teacher.find().select("_id name");
@@ -77,11 +79,47 @@ async function createCourse(req, res) {
   });
 }
 
+async function getTeacherCourses(req, res) {
+  try {
+    const teacherCourses = await Teacher.findById(req.user._id)
+      .populate({
+        path: "courses",
+      })
+      .select("courses");
+
+    res.json({
+      message: "Teacher courses retrieved successfully",
+      data: teacherCourses,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.log("err occurred...", error);
+    res.json({
+      message: error.message || "Teacher courses failed",
+      success: false,
+      error: true,
+    });
+  }
+}
+
 async function getCourses(req, res) {
   const courses = await Course.find();
 
   res.json({
     message: "Courses retrieved ",
+    data: courses,
+    success: true,
+    error: false,
+  });
+}
+
+async function getTeacherCourses(req, res) {
+  const teacherId = req.user._id;
+  const courses = await Course.find({ teacher: teacherId });
+
+  res.json({
+    message: "Teacher courses retrieved",
     data: courses,
     success: true,
     error: false,
@@ -374,12 +412,144 @@ async function getQualificationStatus(req, res) {
   }
 }
 
+async function getEnrolledStudents(req, res) {
+  try {
+    const teacherId = req.user._id;
+
+    // 1️⃣ Find all courses of this teacher
+    const courses = await Course.find({ teacher: teacherId });
+
+    if (courses.length === 0) {
+      return res.json({ students: [] });
+    }
+
+    // 2️⃣ Extract all students from all courses
+    let allStudents = [];
+
+    courses.forEach((course) => {
+      allStudents.push(...course.students.map((id) => id.toString()));
+    });
+
+    // 3️⃣ Remove duplicates
+    const uniqueStudentIds = [...new Set(allStudents)];
+
+    // 4️⃣ Fetch student details
+    const students = await Student.find({
+      _id: { $in: uniqueStudentIds },
+    }).select("name email enrolledCourses");
+
+    // 5️⃣ For frontend: Also send course list with student count
+    const formatted = students.map((student) => {
+      const enrolled = courses
+        .filter((course) => course.students.includes(student._id))
+        .map((c) => c.title);
+
+      return {
+        id: student._id,
+        name: student.name,
+        email: student.email,
+        totalCourses: enrolled.length,
+        courses: enrolled,
+      };
+    });
+
+    res.json({ students: formatted });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Server Error" });
+  }
+}
+
+async function getTeacherDashboard(req, res) {
+  try {
+    const teacherId = req.user._id;
+
+    // Teacher ke courses
+    const courses = await Course.find({ teacher: teacherId });
+
+    const totalCourses = courses.length;
+
+    // 💡 Unique students count
+    let studentIds = [];
+    courses.forEach((c) => {
+      studentIds.push(...c.students.map((id) => id.toString()));
+    });
+    studentIds = [...new Set(studentIds)];
+
+    const totalStudents = studentIds.length;
+
+    // 💡 Average rating
+    const allRatings = [];
+    courses.forEach((c) => {
+      if (c.ratings) allRatings.push(...c.ratings);
+    });
+
+    const avgRating =
+      allRatings.length > 0
+        ? (
+            allRatings.reduce((a, b) => a + b.rating, 0) / allRatings.length
+          ).toFixed(1)
+        : 0;
+
+    // 💡 Course enrollment chart
+    const enrollmentData = courses.map((c) => ({
+      courseName: c.title,
+      students: c.students.length,
+    }));
+
+    // 💡 Recent Activity: last 5 study logs
+    const recentActivity = await Student.aggregate([
+      { $unwind: "$studentProgress" },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "enrolledCourses",
+          foreignField: "_id",
+          as: "courseInfo",
+        },
+      },
+      { $unwind: "$courseInfo" },
+      {
+        $match: {
+          "courseInfo.teacher": new mongoose.Types.ObjectId(teacherId),
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          minutes: "$studentProgress.minutes",
+          date: "$studentProgress.date",
+          course: "$courseInfo.title",
+        },
+      },
+      { $sort: { date: -1 } },
+      { $limit: 5 },
+    ]);
+
+    res.json({
+      totalCourses,
+      totalStudents,
+      avgRating,
+      enrollmentData,
+      recentActivity,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Failed to load dashboard" });
+  }
+}
+
 module.exports = {
   getTeachers,
   createCourse,
+  getTeacherCourses,
   getCourses,
+  getTeacherCourses,
   getcourseById,
   uploadQualification,
   getQualificationStatus,
   getTeacherMetrics,
+  getEnrolledStudents,
+  getTeacherDashboard,
 };

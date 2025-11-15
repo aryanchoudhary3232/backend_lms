@@ -24,17 +24,20 @@ async function getStudents(req, res) {
 async function studentProfile(req, res) {
   try {
     const studentId = req.user._id;
-    const student = await Student.findById(studentId).select("_id");
+    const student = await Student.findById(studentId).populate({
+      path: "enrolledCourses",
+      select: "title image price category level",
+    });
 
     res.json({
-      message: "Student courses retrieved successfully",
+      message: "Student profile retrieved successfully",
       data: student,
       success: true,
       error: false,
     });
   } catch (error) {
     console.log("err occured...", error);
-    res.json({
+    res.status(500).json({
       message: error?.message || error,
       success: false,
       error: true,
@@ -374,6 +377,63 @@ async function getStreakStats(req, res) {
   }
 }
 
+async function studentProgress(req, res) {
+  try {
+    console.log(req.body);
+    const { minutes } = req.body;
+    const studentId = req.user._id;
+    const student = await Student.findById(studentId);
+
+    const today = new Date().toISOString().split("T")[0];
+    const todayStudentProgress = student.studentProgress.find(
+      (sp) => sp.date.toISOString().split("T")[0] === today
+    );
+    if (todayStudentProgress) {
+      console.log("todayStudentProgress.minutes");
+      todayStudentProgress.minutes += minutes;
+    } else {
+      console.log("todayStudentProgress.minutes");
+      student.studentProgress.push({ date: new Date(today), minutes: minutes });
+    }
+
+    await student.save();
+
+    res.json({
+      message: "Student Progress saved",
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("error occured...", error);
+    res.json({
+      message: error.message || "internal server error",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+async function getStudentProgress(req, res) {
+  try {
+    const studentId = req.user._id;
+    const student = await Student.findById(studentId);
+
+    res.json({
+      message: "Student Progress retrieved successfully",
+      data: student.studentProgress,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("error occured...", error);
+    res.json({
+      message: error.message || "internal server error",
+      success: false,
+      error: true,
+    });
+  }
+}
+
 module.exports = {
   getStudents,
   studentProfile,
@@ -387,4 +447,6 @@ module.exports = {
   updateEnrollCourses,
   // Streak / analytics for a student
   getStreakStats,
+  studentProgress,
+  getStudentProgress,
 };
