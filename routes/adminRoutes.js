@@ -11,6 +11,8 @@ const {
   getTeacherById,
   deleteTeacher,
   deleteStudent,
+  approveTeacher,
+  rejectTeacher,
 } = require("../controller/adminController");
 
 // 🟢 Admin Dashboard Data
@@ -19,8 +21,14 @@ router.get("/dashboard", verify, verifyAdmin, getDashboardData);
 // 👥 Get All Users (Students + Teachers)
 router.get("/users", verify, verifyAdmin, getAllUsers);
 
-// �‍🏫 Get Teacher Details by ID
+// 👨‍🏫 Get Teacher Details by ID
 router.get("/teachers/:teacherId", verify, verifyAdmin, getTeacherById);
+
+// ✅ Approve Teacher Verification
+router.put("/teachers/:teacherId/approve", verify, verifyAdmin, approveTeacher);
+
+// ❌ Reject Teacher Verification
+router.put("/teachers/:teacherId/reject", verify, verifyAdmin, rejectTeacher);
 
 // ❌ Delete Teacher
 router.delete("/teachers/:teacherId", verify, verifyAdmin, deleteTeacher);
