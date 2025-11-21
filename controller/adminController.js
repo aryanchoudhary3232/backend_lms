@@ -220,6 +220,72 @@ const deleteStudent = async (req, res) => {
   }
 };
 
+// ✅ Approve Teacher Verification
+const approveTeacher = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    const { notes } = req.body;
+
+    const teacher = await Teacher.findById(teacherId);
+
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        message: "Teacher not found",
+      });
+    }
+
+    teacher.verificationStatus = "Verified";
+    teacher.verificationNotes = notes || "Your qualification has been verified and approved by admin.";
+    await teacher.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Teacher verification approved successfully",
+      data: teacher,
+    });
+  } catch (error) {
+    console.error("Approve Teacher Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while approving teacher",
+    });
+  }
+};
+
+// ❌ Reject Teacher Verification
+const rejectTeacher = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    const { notes } = req.body;
+
+    const teacher = await Teacher.findById(teacherId);
+
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        message: "Teacher not found",
+      });
+    }
+
+    teacher.verificationStatus = "Rejected";
+    teacher.verificationNotes = notes || "Your qualification document was rejected. Please re-upload a valid document.";
+    await teacher.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Teacher verification rejected",
+      data: teacher,
+    });
+  } catch (error) {
+    console.error("Reject Teacher Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while rejecting teacher",
+    });
+  }
+};
+
 module.exports = {
   getDashboardData,
   getAllUsers,
@@ -229,4 +295,6 @@ module.exports = {
   getTeacherById,
   deleteTeacher,
   deleteStudent,
+  approveTeacher,
+  rejectTeacher,
 };
