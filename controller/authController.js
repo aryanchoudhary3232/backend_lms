@@ -124,6 +124,41 @@ async function login(req, res) {
       "aryan123"
     );
 
+    // Inside login function, before sending response...
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Clear time
+    let lastLoginDate = user.lastLogin ? new Date(user.lastLogin) : null;
+
+    if (lastLoginDate) {
+      lastLoginDate = new Date(lastLoginDate.getFullYear(), lastLoginDate.getMonth(), lastLoginDate.getDate());
+      
+      const diffTime = Math.abs(today - lastLoginDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+      if (diffDays === 1) {
+        // Login is consecutive (yesterday)
+        user.streak += 1;
+      } else if (diffDays > 1) {
+        // Streak broken
+        user.streak = 1;
+      }
+      // If diffDays === 0 (same day), do nothing
+    } else {
+      // First login ever
+      user.streak = 1;
+    }
+
+    // Update best streak
+    if (user.streak > (user.bestStreak || 0)) {
+      user.bestStreak = user.streak;
+    }
+
+    user.lastLogin = now;
+    await user.save();
+
+    // ... proceed to send response
+
     res.json({
       message: "Login successful",
       token,
@@ -146,4 +181,7 @@ async function login(req, res) {
   }
 }
 
-module.exports = { register, login };
+module.exports = {
+  register,
+  login,
+};
