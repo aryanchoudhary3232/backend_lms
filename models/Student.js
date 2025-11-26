@@ -20,10 +20,41 @@ const studentSchema = new mongoose.Schema({
   },
   enrolledCourses: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
+      course: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Course",
+        required: true,
+      },
+      enrolledAt: {
+        type: Date,
+        default: Date.now,
+      },
+      quizScores: [
+        {
+          chapterId: {
+            type: mongoose.Schema.Types.ObjectId,
+          },
+          topicId: {
+            type: mongoose.Schema.Types.ObjectId,
+          },
+          score: {
+            type: Number,
+          },
+          totalQuestions: {
+            type: Number,
+          },
+          submittedAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
     },
   ],
+  // 1) Track streak - added lastLogin field
+  lastLogin: {
+    type: Date,
+  },
   streak: {
     type: Number,
     default: 0,
@@ -33,6 +64,7 @@ const studentSchema = new mongoose.Schema({
   },
   bestStreak: {
     type: Number,
+    default: 0,
   },
 
   studentProgress: [
