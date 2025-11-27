@@ -25,13 +25,57 @@ async function studentProfile(req, res) {
   try {
     const studentId = req.user._id;
     const student = await Student.findById(studentId).populate({
-      path: "enrolledCourses",
+      path: "enrolledCourses.course",
       select: "title image price category level",
     });
 
+    // Calculate quiz statistics for each enrolled course
+    const enrolledCoursesWithStats = student.enrolledCourses.map(enrollment => {
+      const quizScores = enrollment.quizScores || [];
+      const avgQuizScore = quizScores.length > 0 
+        ? Math.round(quizScores.reduce((sum, score) => sum + (score.score || 0), 0) / quizScores.length)
+        : 0;
+      
+      return {
+        course: enrollment.course,
+        enrolledAt: enrollment.enrolledAt,
+        avgQuizScore: avgQuizScore,
+        completedQuizzes: quizScores.length,
+        highestScore: quizScores.length > 0 
+          ? Math.max(...quizScores.map(score => score.score || 0))
+          : 0
+      };
+    });
+
+    // Calculate weekly learning minutes from the last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const weeklyProgress = student.studentProgress.filter(progress => 
+      new Date(progress.date) >= sevenDaysAgo
+    ).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const totalWeeklyMinutes = weeklyProgress.reduce((sum, day) => sum + (day.minutes || 0), 0);
+
+    // Prepare response data
+    const responseData = {
+      ...student.toObject(),
+      enrolledCourses: enrolledCoursesWithStats,
+      dashboardStats: {
+        totalEnrolledCourses: enrolledCoursesWithStats.length,
+        currentStreak: student.streak || 0,
+        totalWeeklyMinutes: totalWeeklyMinutes,
+        totalQuizzesTaken: enrolledCoursesWithStats.reduce((sum, course) => sum + course.completedQuizzes, 0),
+        globalQuizAverage: enrolledCoursesWithStats.length > 0
+          ? Math.round(enrolledCoursesWithStats.reduce((sum, course) => sum + course.avgQuizScore, 0) / enrolledCoursesWithStats.length)
+          : 0,
+        highestQuizScore: Math.max(...enrolledCoursesWithStats.map(course => course.highestScore), 0)
+      }
+    };
+
     res.json({
       message: "Student profile retrieved successfully",
-      data: student,
+      data: responseData,
       success: true,
       error: false,
     });
@@ -474,9 +518,156 @@ async function getStudentProgress(req, res) {
   }
 }
 
+// Helper function to update student streak
+async function updateStudentStreak(studentId) {
+  try {
+    const student = await Student.findById(studentId);
+    if (!student) return;
+
+    const today = new Date();
+    const todayDateString = today.toISOString().split('T')[0];
+    
+    let currentStreak = student.streak || 0;
+    let bestStreak = student.bestStreak || 0;
+    
+    if (student.lastActiveDateStreak) {
+      const lastActiveDate = new Date(student.lastActiveDateStreak);
+      const lastActiveDateString = lastActiveDate.toISOString().split('T')[0];
+      
+      if (lastActiveDateString === todayDateString) {
+        // Already logged in today, no need to update
+        return;
+      }
+      
+      const timeDiff = today - lastActiveDate;
+      const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff === 1) {
+        // Consecutive day, increment streak
+        currentStreak++;
+      } else if (daysDiff > 1) {
+        // Streak broken, reset to 1
+        currentStreak = 1;
+      }
+    } else {
+      // First time logging in
+      currentStreak = 1;
+    }
+    
+    // Update best streak if current is higher
+    if (currentStreak > bestStreak) {
+      bestStreak = currentStreak;
+    }
+    
+    // Update student
+    await Student.findByIdAndUpdate(studentId, {
+      streak: currentStreak,
+      bestStreak: bestStreak,
+      lastActiveDateStreak: today,
+      lastLogin: today
+    });
+    
+  } catch (error) {
+    console.error("Error updating student streak:", error);
+  }
+}
+
+async function getStudentDashboard(req, res) {
+  try {
+    const studentId = req.user._id;
+    
+    // Update streak when accessing dashboard
+    await updateStudentStreak(studentId);
+    
+    const student = await Student.findById(studentId).populate({
+      path: "enrolledCourses.course",
+      select: "title image price category level",
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Calculate quiz statistics for each enrolled course
+    const enrolledCoursesWithStats = student.enrolledCourses.map(enrollment => {
+      const quizScores = enrollment.quizScores || [];
+      const avgQuizScore = quizScores.length > 0 
+        ? Math.round(quizScores.reduce((sum, score) => sum + (score.score || 0), 0) / quizScores.length)
+        : 0;
+      
+      return {
+        course: enrollment.course,
+        enrolledAt: enrollment.enrolledAt,
+        avgQuizScore: avgQuizScore,
+        completedQuizzes: quizScores.length,
+        highestScore: quizScores.length > 0 
+          ? Math.max(...quizScores.map(score => score.score || 0))
+          : 0
+      };
+    });
+
+    // Calculate weekly learning minutes from the last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const weeklyProgress = student.studentProgress.filter(progress => 
+      new Date(progress.date) >= sevenDaysAgo
+    ).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const totalWeeklyMinutes = weeklyProgress.reduce((sum, day) => sum + (day.minutes || 0), 0);
+
+    // Get recent quiz submissions for additional stats
+    const quizSubmissions = await QuizSubmission.find({ studentId }).sort({ submittedAt: -1 });
+    
+    // Calculate dashboard statistics
+    const dashboardData = {
+      studentInfo: {
+        name: student.name,
+        email: student.email,
+        streak: student.streak || 0,
+        bestStreak: student.bestStreak || 0,
+        lastActiveDateStreak: student.lastActiveDateStreak
+      },
+      enrolledCourses: enrolledCoursesWithStats,
+      studentProgress: weeklyProgress,
+      dashboardStats: {
+        totalEnrolledCourses: enrolledCoursesWithStats.length,
+        currentStreak: student.streak || 0,
+        totalWeeklyMinutes: totalWeeklyMinutes,
+        totalQuizzesTaken: enrolledCoursesWithStats.reduce((sum, course) => sum + course.completedQuizzes, 0),
+        globalQuizAverage: enrolledCoursesWithStats.length > 0
+          ? Math.round(enrolledCoursesWithStats.reduce((sum, course) => sum + course.avgQuizScore, 0) / enrolledCoursesWithStats.length)
+          : 0,
+        highestQuizScore: Math.max(...enrolledCoursesWithStats.map(course => course.highestScore), 0),
+        totalQuizSubmissions: quizSubmissions.length,
+        recentActivity: student.studentProgress.slice(-7) // Last 7 days of activity
+      }
+    };
+
+    res.json({
+      message: "Student dashboard data retrieved successfully",
+      data: dashboardData,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    res.status(500).json({
+      message: error?.message || "Error fetching dashboard data",
+      success: false,
+      error: true,
+    });
+  }
+}
+
 module.exports = {
   getStudents,
   studentProfile,
+  getStudentDashboard,
   getAllCourses,
   getCourseById,
   enrollInCourse,
