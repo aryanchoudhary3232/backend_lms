@@ -192,12 +192,27 @@ async function updateEnrollCourses(req, res) {
       });
     }
 
+    const enrollementObjects = uniqueCourseIds.map(id => ({
+      course : id,
+      enrolledAt: new Date(),
+      avgQuizScore: 0,
+      completedQuizzes: 0,
+      progress: 0
+    }));
+
+
     await Student.findByIdAndUpdate(
       studentId,
       {
-        $addToSet: {
+        // $addToSet: {
+        //   enrolledCourses: {
+        //     $each: uniqueCourseIds,
+        //   },
+        // },
+
+        $push: {
           enrolledCourses: {
-            $each: uniqueCourseIds,
+            $each: enrollementObjects,
           },
         },
       },

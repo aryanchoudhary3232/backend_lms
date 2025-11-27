@@ -51,21 +51,32 @@ async function updateEnrollCourses(req, res) {
   console.log(courseIds);
   const studentId = req.user._id;
   try {
-    const students = await Student.findByIdAndUpdate(
-      studentId,
-      {
-        $addToSet: {
-          enrolledCourses: {
-            $each: courseIds,
-          },
-        },
-      },
-      { new: true }
+    // Convert courseIds to the new format
+    const enrolledCoursesData = courseIds.map((courseId) => ({
+      course: courseId,
+      enrolledAt: new Date(),
+      quizScores: [],
+    }));
+
+    const student = await Student.findById(studentId);
+    
+    // Get existing course IDs to avoid duplicates
+    const existingCourseIds = student.enrolledCourses.map(
+      (ec) => ec.course.toString()
     );
 
+    // Filter out already enrolled courses
+    const newCourses = enrolledCoursesData.filter(
+      (ec) => !existingCourseIds.includes(ec.course.toString())
+    );
+
+    // Add new courses
+    student.enrolledCourses.push(...newCourses);
+    await student.save();
+
     res.json({
-      message: "Student courses retrieved successfully",
-      data: students,
+      message: "Student courses updated successfully",
+      data: student,
       success: true,
       error: false,
     });
@@ -236,20 +247,22 @@ async function quizSubmission(req, res) {
         (ansObj) => ansObj.question === q.question
       );
       console.log("ansObj", ansObj);
-      const isCorrect = ansObj.tickOption === q.correctOption;
+      const isCorrect = ansObj && ansObj.tickOption === q.correctOption;
       if (isCorrect) correct++;
 
       return {
         questionText: q.question,
         options: q.options,
-        tickOption: ansObj.tickOption,
+        tickOption: ansObj ? ansObj.tickOption : null,
         correctOption: q.correctOption,
         isCorrect,
         explaination: q.explaination,
       };
     });
 
-    const score = `${Math.round((correct / originalQuiz.length) * 100)}%`;
+    // 1. Calculate the new score for this specific quiz attempt
+    const scorePercentage = Math.round((correct / originalQuiz.length) * 100);
+    const score = `${scorePercentage}%`;
 
     const submission = new QuizSubmission({
       studentId,
@@ -262,6 +275,33 @@ async function quizSubmission(req, res) {
       score,
     });
     const data = await submission.save();
+
+    // 2. Update the Student's enrolled course record
+    const student = await Student.findById(studentId);
+    if (student) {
+      const enrolledCourse = student.enrolledCourses.find(
+        (item) => item.course && item.course.toString() === courseId
+      );
+
+      if (enrolledCourse) {
+        // Fetch all submissions to recalculate accurate average
+        const allSubmissions = await QuizSubmission.find({ studentId, courseId });
+
+        const totalScore = allSubmissions.reduce((acc, curr) => {
+          return acc + (parseInt(curr.score) || 0); // parse "80%" -> 80
+        }, 0);
+
+        if (allSubmissions.length > 0) {
+          enrolledCourse.avgQuizScore = Math.round(totalScore / allSubmissions.length);
+          enrolledCourse.completedQuizzes = allSubmissions.length;
+        } else {
+          enrolledCourse.avgQuizScore = scorePercentage;
+          enrolledCourse.completedQuizzes = 1;
+        }
+
+        await student.save();
+      }
+    }
 
     res.json({
       message: "Quiz submitted successfully",
