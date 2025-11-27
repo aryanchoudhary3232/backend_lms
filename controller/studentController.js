@@ -328,19 +328,21 @@ async function quizSubmission(req, res) {
       );
 
       if (enrolledCourse) {
-        // Fetch all submissions to recalculate accurate average
-        const allSubmissions = await QuizSubmission.find({ studentId, courseId });
+        // Add this quiz score to the quizScores array
+        enrolledCourse.quizScores.push({
+          chapterId,
+          topicId,
+          score: scorePercentage, // Store as number, not string with %
+          totalQuestions: originalQuiz.length,
+          submittedAt: new Date()
+        });
 
-        const totalScore = allSubmissions.reduce((acc, curr) => {
-          return acc + (parseInt(curr.score) || 0); // parse "80%" -> 80
-        }, 0);
-
-        if (allSubmissions.length > 0) {
-          enrolledCourse.avgQuizScore = Math.round(totalScore / allSubmissions.length);
-          enrolledCourse.completedQuizzes = allSubmissions.length;
-        } else {
-          enrolledCourse.avgQuizScore = scorePercentage;
-          enrolledCourse.completedQuizzes = 1;
+        // Recalculate average from all quiz scores in this course
+        const quizScores = enrolledCourse.quizScores;
+        if (quizScores.length > 0) {
+          const totalScore = quizScores.reduce((acc, curr) => acc + (curr.score || 0), 0);
+          enrolledCourse.avgQuizScore = Math.round(totalScore / quizScores.length);
+          enrolledCourse.completedQuizzes = quizScores.length;
         }
 
         await student.save();
