@@ -41,4 +41,8 @@ router.get("/enrolled-courses", verify, studentController.getEnrolledCourses);
 router.post('/progress', verify, studentController.studentProgress)
 router.get('/get-progress', verify, studentController.getStudentProgress)
 
+// Topic completion
+router.post('/mark-topic-complete', verify, studentController.markTopicComplete);
+router.get('/topic-completion', verify, studentController.getTopicCompletionStatus);
+
 module.exports = router;

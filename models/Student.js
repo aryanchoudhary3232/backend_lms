@@ -49,6 +49,20 @@ const studentSchema = new mongoose.Schema({
           },
         },
       ],
+      completedTopics: [
+        {
+          chapterId: {
+            type: mongoose.Schema.Types.ObjectId,
+          },
+          topicId: {
+            type: mongoose.Schema.Types.ObjectId,
+          },
+          completedAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
     },
   ],
   // 1) Track streak - added lastLogin field

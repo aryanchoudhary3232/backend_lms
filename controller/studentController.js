@@ -618,11 +618,15 @@ async function getStudentDashboard(req, res) {
     }
 
     // Calculate quiz statistics for each enrolled course
-    const enrolledCoursesWithStats = student.enrolledCourses.map(enrollment => {
+    const enrolledCoursesWithStats = await Promise.all(student.enrolledCourses.map(async enrollment => {
       const quizScores = enrollment.quizScores || [];
       const avgQuizScore = quizScores.length > 0 
         ? Math.round(quizScores.reduce((sum, score) => sum + (score.score || 0), 0) / quizScores.length)
         : 0;
+      
+      // Get total topics for this course
+      const totalTopics = await getTotalTopicsInCourse(enrollment.course._id);
+      const completedTopicsCount = enrollment.completedTopics ? enrollment.completedTopics.length : 0;
       
       return {
         course: enrollment.course,
@@ -631,9 +635,12 @@ async function getStudentDashboard(req, res) {
         completedQuizzes: quizScores.length,
         highestScore: quizScores.length > 0 
           ? Math.max(...quizScores.map(score => score.score || 0))
-          : 0
+          : 0,
+        completedTopics: completedTopicsCount,
+        totalTopics: totalTopics,
+        completionPercentage: totalTopics > 0 ? Math.round((completedTopicsCount / totalTopics) * 100) : 0
       };
-    });
+    }));
 
     // Calculate weekly learning minutes from the last 7 days
     const today = new Date();
@@ -687,6 +694,11 @@ async function getStudentDashboard(req, res) {
           : 0,
         highestQuizScore: Math.max(...enrolledCoursesWithStats.map(course => course.highestScore), 0),
         totalQuizSubmissions: quizSubmissions.length,
+        totalCompletedTopics: enrolledCoursesWithStats.reduce((sum, course) => sum + course.completedTopics, 0),
+        totalTopics: enrolledCoursesWithStats.reduce((sum, course) => sum + course.totalTopics, 0),
+        overallCompletionPercentage: enrolledCoursesWithStats.length > 0 
+          ? Math.round(enrolledCoursesWithStats.reduce((sum, course) => sum + course.completionPercentage, 0) / enrolledCoursesWithStats.length)
+          : 0,
         recentActivity: student.studentProgress.slice(-7) // Last 7 days of activity
       }
     };
@@ -707,6 +719,165 @@ async function getStudentDashboard(req, res) {
   }
 }
 
+async function markTopicComplete(req, res) {
+  try {
+    const { courseId, chapterId, topicId } = req.body;
+    const studentId = req.user._id;
+
+    // Validate required fields
+    if (!courseId || !chapterId || !topicId) {
+      return res.status(400).json({
+        message: "Course ID, Chapter ID, and Topic ID are required",
+        success: false,
+        error: true,
+      });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Find the enrolled course
+    const enrolledCourse = student.enrolledCourses.find(
+      (ec) => ec.course.toString() === courseId
+    );
+
+    if (!enrolledCourse) {
+      return res.status(404).json({
+        message: "Student not enrolled in this course",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Check if topic is already completed
+    const isAlreadyCompleted = enrolledCourse.completedTopics.some(
+      (ct) => ct.chapterId.toString() === chapterId && ct.topicId.toString() === topicId
+    );
+
+    if (isAlreadyCompleted) {
+      return res.json({
+        message: "Topic already marked as complete",
+        success: true,
+        error: false,
+        data: { alreadyCompleted: true }
+      });
+    }
+
+    // Add to completed topics
+    enrolledCourse.completedTopics.push({
+      chapterId,
+      topicId,
+      completedAt: new Date()
+    });
+
+    await student.save();
+
+    res.json({
+      message: "Topic marked as complete successfully",
+      success: true,
+      error: false,
+      data: {
+        completedTopics: enrolledCourse.completedTopics.length,
+        totalTopics: await getTotalTopicsInCourse(courseId)
+      }
+    });
+  } catch (error) {
+    console.error("Error marking topic as complete:", error);
+    res.status(500).json({
+      message: error.message || "Internal server error",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+async function getTopicCompletionStatus(req, res) {
+  try {
+    const { courseId, chapterId, topicId } = req.query;
+    const studentId = req.user._id;
+
+    if (!courseId) {
+      return res.status(400).json({
+        message: "Course ID is required",
+        success: false,
+        error: true,
+      });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    const enrolledCourse = student.enrolledCourses.find(
+      (ec) => ec.course.toString() === courseId
+    );
+
+    if (!enrolledCourse) {
+      return res.status(404).json({
+        message: "Student not enrolled in this course",
+        success: false,
+        error: true,
+      });
+    }
+
+    let completionData = {};
+
+    if (chapterId && topicId) {
+      // Check specific topic
+      const isCompleted = enrolledCourse.completedTopics.some(
+        (ct) => ct.chapterId.toString() === chapterId && ct.topicId.toString() === topicId
+      );
+      completionData = { isCompleted };
+    } else {
+      // Get all completed topics for the course
+      completionData = {
+        completedTopics: enrolledCourse.completedTopics,
+        totalCompleted: enrolledCourse.completedTopics.length
+      };
+    }
+
+    res.json({
+      message: "Topic completion status retrieved successfully",
+      success: true,
+      error: false,
+      data: completionData
+    });
+  } catch (error) {
+    console.error("Error getting topic completion status:", error);
+    res.status(500).json({
+      message: error.message || "Internal server error",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+// Helper function to count total topics in a course
+async function getTotalTopicsInCourse(courseId) {
+  try {
+    const course = await Course.findById(courseId);
+    if (!course) return 0;
+    
+    return course.chapters.reduce((total, chapter) => {
+      return total + (chapter.topics ? chapter.topics.length : 0);
+    }, 0);
+  } catch (error) {
+    console.error("Error counting topics:", error);
+    return 0;
+  }
+}
+
 module.exports = {
   getStudents,
   studentProfile,
@@ -723,4 +894,7 @@ module.exports = {
   getStreakStats,
   studentProgress,
   getStudentProgress,
+  // Topic completion
+  markTopicComplete,
+  getTopicCompletionStatus,
 };
