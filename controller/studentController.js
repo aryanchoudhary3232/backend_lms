@@ -465,34 +465,57 @@ async function getStreakStats(req, res) {
 
 async function studentProgress(req, res) {
   try {
-    console.log(req.body);
     const { minutes } = req.body;
+    
+    // Validate input
+    if (!minutes || typeof minutes !== 'number' || minutes <= 0) {
+      return res.status(400).json({
+        message: "Invalid minutes value",
+        success: false,
+        error: true,
+      });
+    }
+    
     const studentId = req.user._id;
     const student = await Student.findById(studentId);
+    
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+        success: false,
+        error: true,
+      });
+    }
 
     const today = new Date().toISOString().split("T")[0];
     const todayStudentProgress = student.studentProgress.find(
       (sp) => sp.date.toISOString().split("T")[0] === today
     );
+    
     if (todayStudentProgress) {
-      console.log("todayStudentProgress.minutes");
       todayStudentProgress.minutes += minutes;
     } else {
-      console.log("todayStudentProgress.minutes");
-      student.studentProgress.push({ date: new Date(today), minutes: minutes });
+      student.studentProgress.push({ 
+        date: new Date(today), 
+        minutes: minutes 
+      });
     }
 
     await student.save();
 
     res.json({
-      message: "Student Progress saved",
+      message: "Learning progress saved successfully",
+      data: {
+        totalMinutesToday: todayStudentProgress ? todayStudentProgress.minutes : minutes,
+        date: today
+      },
       success: true,
       error: false,
     });
   } catch (error) {
-    console.error("error occured...", error);
-    res.json({
-      message: error.message || "internal server error",
+    console.error("Error saving student progress:", error);
+    res.status(500).json({
+      message: error.message || "Internal server error",
       success: false,
       error: true,
     });
@@ -613,14 +636,32 @@ async function getStudentDashboard(req, res) {
     });
 
     // Calculate weekly learning minutes from the last 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const today = new Date();
+    const weeklyProgressData = [];
+    let totalWeeklyMinutes = 0;
     
-    const weeklyProgress = student.studentProgress.filter(progress => 
-      new Date(progress.date) >= sevenDaysAgo
-    ).sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    const totalWeeklyMinutes = weeklyProgress.reduce((sum, day) => sum + (day.minutes || 0), 0);
+    // Create a complete 7-day array
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateString = date.toISOString().split('T')[0];
+      
+      // Find existing progress for this date
+      const existingProgress = student.studentProgress.find(progress => {
+        const progressDate = new Date(progress.date).toISOString().split('T')[0];
+        return progressDate === dateString;
+      });
+      
+      const minutes = existingProgress ? existingProgress.minutes : 0;
+      totalWeeklyMinutes += minutes;
+      
+      weeklyProgressData.push({
+        date: date,
+        minutes: minutes
+      });
+    }
+    
+    const weeklyProgress = weeklyProgressData;
 
     // Get recent quiz submissions for additional stats
     const quizSubmissions = await QuizSubmission.find({ studentId }).sort({ submittedAt: -1 });
