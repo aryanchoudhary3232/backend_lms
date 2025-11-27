@@ -25,13 +25,57 @@ async function studentProfile(req, res) {
   try {
     const studentId = req.user._id;
     const student = await Student.findById(studentId).populate({
-      path: "enrolledCourses",
+      path: "enrolledCourses.course",
       select: "title image price category level",
     });
 
+    // Calculate quiz statistics for each enrolled course
+    const enrolledCoursesWithStats = student.enrolledCourses.map(enrollment => {
+      const quizScores = enrollment.quizScores || [];
+      const avgQuizScore = quizScores.length > 0 
+        ? Math.round(quizScores.reduce((sum, score) => sum + (score.score || 0), 0) / quizScores.length)
+        : 0;
+      
+      return {
+        course: enrollment.course,
+        enrolledAt: enrollment.enrolledAt,
+        avgQuizScore: avgQuizScore,
+        completedQuizzes: quizScores.length,
+        highestScore: quizScores.length > 0 
+          ? Math.max(...quizScores.map(score => score.score || 0))
+          : 0
+      };
+    });
+
+    // Calculate weekly learning minutes from the last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const weeklyProgress = student.studentProgress.filter(progress => 
+      new Date(progress.date) >= sevenDaysAgo
+    ).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const totalWeeklyMinutes = weeklyProgress.reduce((sum, day) => sum + (day.minutes || 0), 0);
+
+    // Prepare response data
+    const responseData = {
+      ...student.toObject(),
+      enrolledCourses: enrolledCoursesWithStats,
+      dashboardStats: {
+        totalEnrolledCourses: enrolledCoursesWithStats.length,
+        currentStreak: student.streak || 0,
+        totalWeeklyMinutes: totalWeeklyMinutes,
+        totalQuizzesTaken: enrolledCoursesWithStats.reduce((sum, course) => sum + course.completedQuizzes, 0),
+        globalQuizAverage: enrolledCoursesWithStats.length > 0
+          ? Math.round(enrolledCoursesWithStats.reduce((sum, course) => sum + course.avgQuizScore, 0) / enrolledCoursesWithStats.length)
+          : 0,
+        highestQuizScore: Math.max(...enrolledCoursesWithStats.map(course => course.highestScore), 0)
+      }
+    };
+
     res.json({
       message: "Student profile retrieved successfully",
-      data: student,
+      data: responseData,
       success: true,
       error: false,
     });
@@ -141,9 +185,16 @@ async function getCourseById(req, res) {
       });
     }
 
+    // compute rating summary
+    const ratings = course.ratings || [];
+    const ratingCount = ratings.length;
+    const avg = ratingCount
+      ? Math.round((ratings.reduce((s, r) => s + (r.rating || 0), 0) / ratingCount) * 10) / 10
+      : 0;
+
     res.json({
       message: "Course retrieved successfully",
-      data: course,
+      data: { ...course.toObject(), rating: { average: avg, count: ratingCount } },
       success: true,
       error: false,
     });
@@ -277,19 +328,21 @@ async function quizSubmission(req, res) {
       );
 
       if (enrolledCourse) {
-        // Fetch all submissions to recalculate accurate average
-        const allSubmissions = await QuizSubmission.find({ studentId, courseId });
+        // Add this quiz score to the quizScores array
+        enrolledCourse.quizScores.push({
+          chapterId,
+          topicId,
+          score: scorePercentage, // Store as number, not string with %
+          totalQuestions: originalQuiz.length,
+          submittedAt: new Date()
+        });
 
-        const totalScore = allSubmissions.reduce((acc, curr) => {
-          return acc + (parseInt(curr.score) || 0); // parse "80%" -> 80
-        }, 0);
-
-        if (allSubmissions.length > 0) {
-          enrolledCourse.avgQuizScore = Math.round(totalScore / allSubmissions.length);
-          enrolledCourse.completedQuizzes = allSubmissions.length;
-        } else {
-          enrolledCourse.avgQuizScore = scorePercentage;
-          enrolledCourse.completedQuizzes = 1;
+        // Recalculate average from all quiz scores in this course
+        const quizScores = enrolledCourse.quizScores;
+        if (quizScores.length > 0) {
+          const totalScore = quizScores.reduce((acc, curr) => acc + (curr.score || 0), 0);
+          enrolledCourse.avgQuizScore = Math.round(totalScore / quizScores.length);
+          enrolledCourse.completedQuizzes = quizScores.length;
         }
 
         await student.save();
@@ -412,34 +465,57 @@ async function getStreakStats(req, res) {
 
 async function studentProgress(req, res) {
   try {
-    console.log(req.body);
     const { minutes } = req.body;
+    
+    // Validate input
+    if (!minutes || typeof minutes !== 'number' || minutes <= 0) {
+      return res.status(400).json({
+        message: "Invalid minutes value",
+        success: false,
+        error: true,
+      });
+    }
+    
     const studentId = req.user._id;
     const student = await Student.findById(studentId);
+    
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+        success: false,
+        error: true,
+      });
+    }
 
     const today = new Date().toISOString().split("T")[0];
     const todayStudentProgress = student.studentProgress.find(
       (sp) => sp.date.toISOString().split("T")[0] === today
     );
+    
     if (todayStudentProgress) {
-      console.log("todayStudentProgress.minutes");
       todayStudentProgress.minutes += minutes;
     } else {
-      console.log("todayStudentProgress.minutes");
-      student.studentProgress.push({ date: new Date(today), minutes: minutes });
+      student.studentProgress.push({ 
+        date: new Date(today), 
+        minutes: minutes 
+      });
     }
 
     await student.save();
 
     res.json({
-      message: "Student Progress saved",
+      message: "Learning progress saved successfully",
+      data: {
+        totalMinutesToday: todayStudentProgress ? todayStudentProgress.minutes : minutes,
+        date: today
+      },
       success: true,
       error: false,
     });
   } catch (error) {
-    console.error("error occured...", error);
-    res.json({
-      message: error.message || "internal server error",
+    console.error("Error saving student progress:", error);
+    res.status(500).json({
+      message: error.message || "Internal server error",
       success: false,
       error: true,
     });
@@ -467,9 +543,345 @@ async function getStudentProgress(req, res) {
   }
 }
 
+// Helper function to update student streak
+async function updateStudentStreak(studentId) {
+  try {
+    const student = await Student.findById(studentId);
+    if (!student) return;
+
+    const today = new Date();
+    const todayDateString = today.toISOString().split('T')[0];
+    
+    let currentStreak = student.streak || 0;
+    let bestStreak = student.bestStreak || 0;
+    
+    if (student.lastActiveDateStreak) {
+      const lastActiveDate = new Date(student.lastActiveDateStreak);
+      const lastActiveDateString = lastActiveDate.toISOString().split('T')[0];
+      
+      if (lastActiveDateString === todayDateString) {
+        // Already logged in today, no need to update
+        return;
+      }
+      
+      const timeDiff = today - lastActiveDate;
+      const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff === 1) {
+        // Consecutive day, increment streak
+        currentStreak++;
+      } else if (daysDiff > 1) {
+        // Streak broken, reset to 1
+        currentStreak = 1;
+      }
+    } else {
+      // First time logging in
+      currentStreak = 1;
+    }
+    
+    // Update best streak if current is higher
+    if (currentStreak > bestStreak) {
+      bestStreak = currentStreak;
+    }
+    
+    // Update student
+    await Student.findByIdAndUpdate(studentId, {
+      streak: currentStreak,
+      bestStreak: bestStreak,
+      lastActiveDateStreak: today,
+      lastLogin: today
+    });
+    
+  } catch (error) {
+    console.error("Error updating student streak:", error);
+  }
+}
+
+async function getStudentDashboard(req, res) {
+  try {
+    const studentId = req.user._id;
+    
+    // Update streak when accessing dashboard
+    await updateStudentStreak(studentId);
+    
+    const student = await Student.findById(studentId).populate({
+      path: "enrolledCourses.course",
+      select: "title image price category level",
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Calculate quiz statistics for each enrolled course
+    const enrolledCoursesWithStats = await Promise.all(student.enrolledCourses.map(async enrollment => {
+      const quizScores = enrollment.quizScores || [];
+      const avgQuizScore = quizScores.length > 0 
+        ? Math.round(quizScores.reduce((sum, score) => sum + (score.score || 0), 0) / quizScores.length)
+        : 0;
+      
+      // Get total topics for this course
+      const totalTopics = await getTotalTopicsInCourse(enrollment.course._id);
+      const completedTopicsCount = enrollment.completedTopics ? enrollment.completedTopics.length : 0;
+      
+      return {
+        course: enrollment.course,
+        enrolledAt: enrollment.enrolledAt,
+        avgQuizScore: avgQuizScore,
+        completedQuizzes: quizScores.length,
+        highestScore: quizScores.length > 0 
+          ? Math.max(...quizScores.map(score => score.score || 0))
+          : 0,
+        completedTopics: completedTopicsCount,
+        totalTopics: totalTopics,
+        completionPercentage: totalTopics > 0 ? Math.round((completedTopicsCount / totalTopics) * 100) : 0
+      };
+    }));
+
+    // Calculate weekly learning minutes from the last 7 days
+    const today = new Date();
+    const weeklyProgressData = [];
+    let totalWeeklyMinutes = 0;
+    
+    // Create a complete 7-day array
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateString = date.toISOString().split('T')[0];
+      
+      // Find existing progress for this date
+      const existingProgress = student.studentProgress.find(progress => {
+        const progressDate = new Date(progress.date).toISOString().split('T')[0];
+        return progressDate === dateString;
+      });
+      
+      const minutes = existingProgress ? existingProgress.minutes : 0;
+      totalWeeklyMinutes += minutes;
+      
+      weeklyProgressData.push({
+        date: date,
+        minutes: minutes
+      });
+    }
+    
+    const weeklyProgress = weeklyProgressData;
+
+    // Get recent quiz submissions for additional stats
+    const quizSubmissions = await QuizSubmission.find({ studentId }).sort({ submittedAt: -1 });
+    
+    // Calculate dashboard statistics
+    const dashboardData = {
+      studentInfo: {
+        name: student.name,
+        email: student.email,
+        streak: student.streak || 0,
+        bestStreak: student.bestStreak || 0,
+        lastActiveDateStreak: student.lastActiveDateStreak
+      },
+      enrolledCourses: enrolledCoursesWithStats,
+      studentProgress: weeklyProgress,
+      dashboardStats: {
+        totalEnrolledCourses: enrolledCoursesWithStats.length,
+        currentStreak: student.streak || 0,
+        totalWeeklyMinutes: totalWeeklyMinutes,
+        totalQuizzesTaken: enrolledCoursesWithStats.reduce((sum, course) => sum + course.completedQuizzes, 0),
+        globalQuizAverage: enrolledCoursesWithStats.length > 0
+          ? Math.round(enrolledCoursesWithStats.reduce((sum, course) => sum + course.avgQuizScore, 0) / enrolledCoursesWithStats.length)
+          : 0,
+        highestQuizScore: Math.max(...enrolledCoursesWithStats.map(course => course.highestScore), 0),
+        totalQuizSubmissions: quizSubmissions.length,
+        totalCompletedTopics: enrolledCoursesWithStats.reduce((sum, course) => sum + course.completedTopics, 0),
+        totalTopics: enrolledCoursesWithStats.reduce((sum, course) => sum + course.totalTopics, 0),
+        overallCompletionPercentage: enrolledCoursesWithStats.length > 0 
+          ? Math.round(enrolledCoursesWithStats.reduce((sum, course) => sum + course.completionPercentage, 0) / enrolledCoursesWithStats.length)
+          : 0,
+        recentActivity: student.studentProgress.slice(-7) // Last 7 days of activity
+      }
+    };
+
+    res.json({
+      message: "Student dashboard data retrieved successfully",
+      data: dashboardData,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    res.status(500).json({
+      message: error?.message || "Error fetching dashboard data",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+async function markTopicComplete(req, res) {
+  try {
+    const { courseId, chapterId, topicId } = req.body;
+    const studentId = req.user._id;
+
+    // Validate required fields
+    if (!courseId || !chapterId || !topicId) {
+      return res.status(400).json({
+        message: "Course ID, Chapter ID, and Topic ID are required",
+        success: false,
+        error: true,
+      });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Find the enrolled course
+    const enrolledCourse = student.enrolledCourses.find(
+      (ec) => ec.course.toString() === courseId
+    );
+
+    if (!enrolledCourse) {
+      return res.status(404).json({
+        message: "Student not enrolled in this course",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Check if topic is already completed
+    const isAlreadyCompleted = enrolledCourse.completedTopics.some(
+      (ct) => ct.chapterId.toString() === chapterId && ct.topicId.toString() === topicId
+    );
+
+    if (isAlreadyCompleted) {
+      return res.json({
+        message: "Topic already marked as complete",
+        success: true,
+        error: false,
+        data: { alreadyCompleted: true }
+      });
+    }
+
+    // Add to completed topics
+    enrolledCourse.completedTopics.push({
+      chapterId,
+      topicId,
+      completedAt: new Date()
+    });
+
+    await student.save();
+
+    res.json({
+      message: "Topic marked as complete successfully",
+      success: true,
+      error: false,
+      data: {
+        completedTopics: enrolledCourse.completedTopics.length,
+        totalTopics: await getTotalTopicsInCourse(courseId)
+      }
+    });
+  } catch (error) {
+    console.error("Error marking topic as complete:", error);
+    res.status(500).json({
+      message: error.message || "Internal server error",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+async function getTopicCompletionStatus(req, res) {
+  try {
+    const { courseId, chapterId, topicId } = req.query;
+    const studentId = req.user._id;
+
+    if (!courseId) {
+      return res.status(400).json({
+        message: "Course ID is required",
+        success: false,
+        error: true,
+      });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    const enrolledCourse = student.enrolledCourses.find(
+      (ec) => ec.course.toString() === courseId
+    );
+
+    if (!enrolledCourse) {
+      return res.status(404).json({
+        message: "Student not enrolled in this course",
+        success: false,
+        error: true,
+      });
+    }
+
+    let completionData = {};
+
+    if (chapterId && topicId) {
+      // Check specific topic
+      const isCompleted = enrolledCourse.completedTopics.some(
+        (ct) => ct.chapterId.toString() === chapterId && ct.topicId.toString() === topicId
+      );
+      completionData = { isCompleted };
+    } else {
+      // Get all completed topics for the course
+      completionData = {
+        completedTopics: enrolledCourse.completedTopics,
+        totalCompleted: enrolledCourse.completedTopics.length
+      };
+    }
+
+    res.json({
+      message: "Topic completion status retrieved successfully",
+      success: true,
+      error: false,
+      data: completionData
+    });
+  } catch (error) {
+    console.error("Error getting topic completion status:", error);
+    res.status(500).json({
+      message: error.message || "Internal server error",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+// Helper function to count total topics in a course
+async function getTotalTopicsInCourse(courseId) {
+  try {
+    const course = await Course.findById(courseId);
+    if (!course) return 0;
+    
+    return course.chapters.reduce((total, chapter) => {
+      return total + (chapter.topics ? chapter.topics.length : 0);
+    }, 0);
+  } catch (error) {
+    console.error("Error counting topics:", error);
+    return 0;
+  }
+}
+
 module.exports = {
   getStudents,
   studentProfile,
+  getStudentDashboard,
   getAllCourses,
   getCourseById,
   enrollInCourse,
@@ -482,4 +894,7 @@ module.exports = {
   getStreakStats,
   studentProgress,
   getStudentProgress,
+  // Topic completion
+  markTopicComplete,
+  getTopicCompletionStatus,
 };

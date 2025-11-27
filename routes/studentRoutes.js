@@ -14,6 +14,7 @@ router.get("/test", (req, res) => {
 // Student profile
 router.get("/", studentController.getStudents);
 router.get('/profile', verify, studentController.studentProfile)
+router.get('/dashboard', verify, studentController.getStudentDashboard)
 router.put('/update-enrollCourses',verify, studentController.updateEnrollCourses)
 router.post('/quiz_submit',verify, studentController.quizSubmission)
 
@@ -39,5 +40,9 @@ router.get("/enrolled-courses", verify, studentController.getEnrolledCourses);
 //student progress
 router.post('/progress', verify, studentController.studentProgress)
 router.get('/get-progress', verify, studentController.getStudentProgress)
+
+// Topic completion
+router.post('/mark-topic-complete', verify, studentController.markTopicComplete);
+router.get('/topic-completion', verify, studentController.getTopicCompletionStatus);
 
 module.exports = router;
