@@ -181,7 +181,228 @@ async function login(req, res) {
   }
 }
 
+// ============================================
+// 🔹 PROFILE MANAGEMENT FUNCTIONS
+// ============================================
+
+/**
+ * Get Profile - Retrieves the current user's profile data
+ * Works for all roles (Student, Teacher, Admin) using JWT payload
+ * @route GET /auth/profile
+ */
+async function getProfile(req, res) {
+  try {
+    const { _id, role } = req.user;
+
+    // Select the appropriate model based on user role
+    let user = null;
+    if (role === "Student") {
+      user = await Student.findById(_id).select("-password");
+    } else if (role === "Teacher") {
+      user = await Teacher.findById(_id).select("-password");
+    } else if (role === "Admin") {
+      user = await Admin.findById(_id).select("-password");
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    res.json({
+      message: "Profile fetched successfully",
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Get profile error:", error);
+    res.status(500).json({
+      message: "Server error while fetching profile",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+/**
+ * Update Profile - Updates user's display name
+ * Email is read-only and cannot be changed to maintain account integrity
+ * @route PUT /auth/profile
+ */
+async function updateProfile(req, res) {
+  try {
+    const { _id, role } = req.user;
+    const { name } = req.body;
+
+    // Validate name field
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({
+        message: "Name is required and cannot be empty",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Select the appropriate model based on user role
+    let Model;
+    if (role === "Student") {
+      Model = Student;
+    } else if (role === "Teacher") {
+      Model = Teacher;
+    } else if (role === "Admin") {
+      Model = Admin;
+    } else {
+      return res.status(400).json({
+        message: "Invalid role",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Update only the name field (email is read-only)
+    const updatedUser = await Model.findByIdAndUpdate(
+      _id,
+      { name: name.trim() },
+      { new: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    res.json({
+      message: "Profile updated successfully",
+      data: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      },
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({
+      message: "Server error while updating profile",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+/**
+ * Change Password - Allows user to change their password
+ * Requires current password verification before setting new password
+ * @route PUT /auth/change-password
+ */
+async function changePassword(req, res) {
+  try {
+    const { _id, role } = req.user;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    // ✅ Validate all required fields
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        message: "Current password, new password, and confirm password are required",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ✅ Check if new passwords match
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        message: "New passwords do not match",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ✅ Validate new password length (minimum 6 characters)
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message: "New password must be at least 6 characters long",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Select the appropriate model based on user role
+    let user = null;
+    if (role === "Student") {
+      user = await Student.findById(_id);
+    } else if (role === "Teacher") {
+      user = await Teacher.findById(_id);
+    } else if (role === "Admin") {
+      user = await Admin.findById(_id);
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ✅ Verify current password is correct
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        message: "Current password is incorrect",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ✅ Prevent using the same password as the new one
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        message: "New password cannot be the same as current password",
+        success: false,
+        error: true,
+      });
+    }
+
+    // ✅ Hash the new password and save
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.json({
+      message: "Password changed successfully",
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({
+      message: "Server error while changing password",
+      success: false,
+      error: true,
+    });
+  }
+}
+
 module.exports = {
   register,
   login,
+  getProfile,
+  updateProfile,
+  changePassword,
 };
