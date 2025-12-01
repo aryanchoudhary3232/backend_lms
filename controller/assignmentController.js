@@ -19,7 +19,7 @@ async function createAssignment(req, res) {
       allowLateSubmission,
       submissionType,
     } = req.body;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
 
     // Verify course belongs to teacher
     const courseDoc = await Course.findById(course);
@@ -80,7 +80,7 @@ async function createAssignment(req, res) {
 // Get Teacher's Assignments
 async function getTeacherAssignments(req, res) {
   try {
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
     const { courseId } = req.query;
 
     const query = { teacher: teacherId };
@@ -132,7 +132,7 @@ async function getTeacherAssignments(req, res) {
 async function getAssignmentSubmissions(req, res) {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
 
     // Verify assignment belongs to teacher
     const assignment = await Assignment.findById(assignmentId);
@@ -175,7 +175,7 @@ async function gradeSubmission(req, res) {
   try {
     const { submissionId } = req.params;
     const { marks, feedback } = req.body;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
 
     const submission = await Submission.findById(submissionId).populate(
       "assignment"
@@ -233,7 +233,7 @@ async function gradeSubmission(req, res) {
 async function updateAssignment(req, res) {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
     const updates = req.body;
 
     const assignment = await Assignment.findById(assignmentId);
@@ -271,7 +271,7 @@ async function updateAssignment(req, res) {
 async function deleteAssignment(req, res) {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
 
     const assignment = await Assignment.findById(assignmentId);
     if (!assignment) {
@@ -309,14 +309,26 @@ async function deleteAssignment(req, res) {
 // ============= STUDENT FUNCTIONS =============
 
 // Get Student's Assignments
+// Fetches all assignments for courses the student is enrolled in
 async function getStudentAssignments(req, res) {
   try {
-    const studentId = req.user.userId;
+    const studentId = req.user._id;
     const { courseId, status } = req.query;
 
-    // Get enrolled courses
+    // Get student's enrolled courses from database
     const Student = require("../models/Student");
     const student = await Student.findById(studentId).select("enrolledCourses");
+    
+    // Return 404 if student not found in database
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        error: true,
+        message: "Student not found",
+      });
+    }
+
+    // Extract course IDs from enrolled courses array
     const enrolledCourseIds = student.enrolledCourses.map((c) => c.toString());
 
     // Build query
@@ -391,7 +403,7 @@ async function submitAssignment(req, res) {
   try {
     const { assignmentId } = req.params;
     const { textContent } = req.body;
-    const studentId = req.user.userId;
+    const studentId = req.user._id;
 
     const assignment = await Assignment.findById(assignmentId);
     if (!assignment) {
@@ -464,7 +476,7 @@ async function submitAssignment(req, res) {
 async function getStudentSubmission(req, res) {
   try {
     const { assignmentId } = req.params;
-    const studentId = req.user.userId;
+    const studentId = req.user._id;
 
     const submission = await Submission.findOne({
       assignment: assignmentId,
