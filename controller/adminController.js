@@ -236,7 +236,8 @@ const approveTeacher = async (req, res) => {
     }
 
     teacher.verificationStatus = "Verified";
-    teacher.verificationNotes = notes || "Your qualification has been verified and approved by admin.";
+    teacher.verificationNotes =
+      notes || "Your qualification has been verified and approved by admin.";
     await teacher.save();
 
     res.status(200).json({
@@ -269,7 +270,9 @@ const rejectTeacher = async (req, res) => {
     }
 
     teacher.verificationStatus = "Rejected";
-    teacher.verificationNotes = notes || "Your qualification document was rejected. Please re-upload a valid document.";
+    teacher.verificationNotes =
+      notes ||
+      "Your qualification document was rejected. Please re-upload a valid document.";
     await teacher.save();
 
     res.status(200).json({
