@@ -16,4 +16,8 @@ router.delete('/:deckId/cards/:cardId', verify.verify, verify.verifyTeacher, fla
 router.post('/:deckId/publish', verify.verify, verify.verifyTeacher, flashcard.publishDeck);
 router.put('/:deckId/publish', verify.verify, verify.verifyTeacher, flashcard.publishDeck);
 
+// Student APIs
+router.get('/course/:courseId', verify.verify, flashcard.getCourseDecks);
+router.get('/student/deck/:deckId', verify.verify, flashcard.getStudyDeck);
+
 module.exports = router;

@@ -349,53 +349,113 @@ async function deleteAssignment(req, res) {
 
 // ============= STUDENT FUNCTIONS =============
 
-// Get Student's Assignments
+/**
+ * Helper: Get enrolled course IDs for a student
+ * Fetches the student profile and extracts the list of enrolled course IDs.
+ * @param {string} studentId - The ID of the student
+ * @returns {Promise<string[]>} - Array of course IDs
+ */
+async function getStudentEnrolledCourseIds(studentId) {
+  const Student = require("../models/Student");
+  const student = await Student.findById(studentId).select("enrolledCourses");
+  
+  if (!student) {
+    throw new Error("Student profile not found");
+  }
+  
+  // Ensure enrolledCourses exists and map to strings
+  return (student.enrolledCourses || []).map((c) => c.toString());
+}
+
+/**
+ * Helper: Build assignment query
+ * Constructs the MongoDB query object for fetching assignments.
+ * @param {string[]} enrolledCourseIds - List of course IDs the student is enrolled in
+ * @param {string} [filterCourseId] - Optional specific course ID to filter by
+ * @returns {Object} - MongoDB query object
+ */
+function buildAssignmentQuery(enrolledCourseIds, filterCourseId) {
+  const query = {
+    course: { $in: enrolledCourseIds },
+    status: "active",
+  };
+  
+  if (filterCourseId) {
+    query.course = filterCourseId;
+  }
+  return query;
+}
+
+/**
+ * Helper: Enrich assignment with submission status
+ * Checks if the student has submitted the assignment and calculates status.
+ * @param {Object} assignment - The assignment document
+ * @param {string} studentId - The ID of the student
+ * @returns {Promise<Object>} - Assignment object with submissionStatus
+ */
+async function enrichAssignmentWithStatus(assignment, studentId) {
+  const submission = await Submission.findOne({
+    assignment: assignment._id,
+    student: studentId,
+  });
+
+  const now = new Date();
+  const isOverdue = now > assignment.dueDate && !submission;
+
+  return {
+    ...assignment.toObject(),
+    submissionStatus: {
+      submitted: !!submission,
+      isOverdue,
+      grade: submission?.grade || null,
+      submittedAt: submission?.submittedAt || null,
+    },
+  };
+}
+
+/**
+ * Get Student's Assignments
+ * Fetches assignments for courses the student is enrolled in, with filtering options.
+ */
 async function getStudentAssignments(req, res) {
   try {
     const studentId = req.user._id;
     const { courseId, status } = req.query;
 
-    // Get enrolled courses
-    const Student = require("../models/Student");
-    const student = await Student.findById(studentId).select("enrolledCourses");
-    const enrolledCourseIds = student.enrolledCourses.map((c) => c.toString());
+    // 1. Get enrolled courses
+    let enrolledCourseIds;
+    try {
+      enrolledCourseIds = await getStudentEnrolledCourseIds(studentId);
+    } catch (err) {
+      console.error("Error fetching student profile:", err.message);
+      return res.status(404).json({ 
+        success: false, 
+        message: "Student profile not found. Please ensure you are logged in as a student." 
+      });
+    }
 
-    // Build query
-    const query = {
-      course: { $in: enrolledCourseIds },
-      status: "active",
-    };
-    if (courseId) query.course = courseId;
+    if (enrolledCourseIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: "No enrolled courses found",
+      });
+    }
 
+    // 2. Build Query and Fetch Assignments
+    const query = buildAssignmentQuery(enrolledCourseIds, courseId);
+    
     const assignments = await Assignment.find(query)
       .populate("course", "title")
       .populate("teacher", "name")
       .sort({ dueDate: 1 });
 
-    // Get submission status for each assignment
+    // 3. Enrich with Submission Status
     const assignmentsWithStatus = await Promise.all(
-      assignments.map(async (assignment) => {
-        const submission = await Submission.findOne({
-          assignment: assignment._id,
-          student: studentId,
-        });
-
-        const now = new Date();
-        const isOverdue = now > assignment.dueDate && !submission;
-
-        return {
-          ...assignment.toObject(),
-          submissionStatus: {
-            submitted: !!submission,
-            isOverdue,
-            grade: submission?.grade || null,
-            submittedAt: submission?.submittedAt || null,
-          },
-        };
-      })
+      assignments.map((assignment) => enrichAssignmentWithStatus(assignment, studentId))
     );
 
-    // Filter by status if provided
+    // 4. Filter Results based on status query param
     let filteredAssignments = assignmentsWithStatus;
     if (status === "pending") {
       filteredAssignments = assignmentsWithStatus.filter(
