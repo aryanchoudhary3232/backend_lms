@@ -14,6 +14,7 @@ const assignmentRoutes = require("./routes/assignmentRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const flashcardRoutes = require('./routes/flashcardRoutes');
+const statsRoutes = require("./routes/statsRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -57,6 +58,9 @@ app.use("/assignments", assignmentRoutes);
 
 // flashcard routes
 app.use('/api/flashcards', flashcardRoutes);
+
+// stats routes
+app.use("/stats", statsRoutes);
 
 app.get("/", (req, res) => {
   res.send("Welcome to server");
