@@ -4,7 +4,7 @@ const Student = require("../models/Student");
 const Order = require("../models/Order");
 const path = require("path");
 const { notFound } = require("../utils/respond");
-const mongoose = require('mongoose')
+const mongoose = require("mongoose");
 
 async function getTeachers(req, res) {
   const teachers = await Teacher.find().select("_id name");
@@ -77,6 +77,99 @@ async function createCourse(req, res) {
     success: true,
     error: false,
   });
+}
+
+async function updateCourse(req, res) {
+  try {
+    const { courseId } = req.params;
+    const teacherId = req.user._id;
+
+    // Check if course exists and belongs to this teacher
+    const existingCourse = await Course.findById(courseId);
+    if (!existingCourse) {
+      return res.status(404).json({
+        message: "Course not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    if (existingCourse.teacher.toString() !== teacherId.toString()) {
+      return res.status(403).json({
+        message: "You are not authorized to edit this course",
+        success: false,
+        error: true,
+      });
+    }
+
+    const { title, description, category, level, duration, price } = req.body;
+
+    // Prepare update object
+    const updateData = {};
+    if (title) updateData.title = title;
+    if (description) updateData.description = description;
+    if (category) updateData.category = category;
+    if (level) updateData.level = level;
+    if (duration) updateData.duration = duration;
+    if (price) updateData.price = price;
+
+    // Handle file uploads if present
+    if (req.files && req.files.length > 0) {
+      const imageFile = req.files.find((f) => f.fieldname === "image");
+      const videoFile = req.files.find((f) => f.fieldname === "video");
+      const notesFile = req.files.find((f) => f.fieldname === "notes");
+
+      if (imageFile) updateData.image = imageFile.path;
+      if (videoFile) updateData.video = videoFile.path;
+      if (notesFile) updateData.notes = notesFile.path;
+    }
+
+    // Handle chapters if provided
+    if (req.body.chapters) {
+      let chapters = JSON.parse(req.body.chapters);
+      
+      const newChapters = chapters.map((chapter, chapterIdx) => {
+        return {
+          _id: chapter._id, // Keep existing ID if updating
+          title: chapter.title,
+          topics: chapter.topics.map((topic, topicIdx) => {
+            // Check if there's a new video file for this topic
+            const fileKey = `chapters[${chapterIdx}][topics][${topicIdx}][video]`;
+            const topicVideoFile = req.files?.find((f) => f.fieldname === fileKey);
+            
+            return {
+              _id: topic._id, // Keep existing ID if updating
+              title: topic.title,
+              video: topicVideoFile ? topicVideoFile.path : topic.video,
+              quiz: topic.quiz,
+            };
+          }),
+        };
+      });
+      
+      updateData.chapters = newChapters;
+    }
+
+    const updatedCourse = await Course.findByIdAndUpdate(
+      courseId,
+      updateData,
+      { new: true }
+    );
+
+    res.json({
+      message: "Course updated successfully",
+      data: updatedCourse,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.log("Error updating course:", error);
+    res.status(500).json({
+      message: error.message || "Failed to update course",
+      success: false,
+      error: true,
+    });
+  }
 }
 
 async function getTeacherCourses(req, res) {
@@ -497,34 +590,64 @@ async function getTeacherDashboard(req, res) {
       students: c.students.length,
     }));
 
-    // 💡 Recent Activity: last 5 study logs
+    // 💡 Recent Activity: last 5 course activities (based on enrollments and completed topics)
     const recentActivity = await Student.aggregate([
-      { $unwind: "$studentProgress" },
+      // Unwind enrolled courses first
+      { $unwind: "$enrolledCourses" },
+      // Lookup course details
       {
         $lookup: {
           from: "courses",
-          localField: "enrolledCourses",
+          localField: "enrolledCourses.course",
           foreignField: "_id",
           as: "courseInfo",
         },
       },
       { $unwind: "$courseInfo" },
+      // Match only teacher's courses
       {
         $match: {
           "courseInfo.teacher": new mongoose.Types.ObjectId(teacherId),
         },
       },
+      // Unwind completedTopics to get individual activities
+      {
+        $unwind: {
+          path: "$enrolledCourses.completedTopics",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // Project the fields we need
       {
         $project: {
           name: 1,
-          email: 1,
-          minutes: "$studentProgress.minutes",
-          date: "$studentProgress.date",
           course: "$courseInfo.title",
+          date: {
+            $ifNull: [
+              "$enrolledCourses.completedTopics.completedAt",
+              "$enrolledCourses.enrolledAt",
+            ],
+          },
+          activityType: {
+            $cond: {
+              if: { $ifNull: ["$enrolledCourses.completedTopics", false] },
+              then: "Completed Topic",
+              else: "Enrolled",
+            },
+          },
         },
       },
       { $sort: { date: -1 } },
       { $limit: 5 },
+      // Add minutes as 0 since we don't track per-activity minutes
+      {
+        $project: {
+          name: 1,
+          course: 1,
+          date: 1,
+          minutes: { $literal: "-" },
+        },
+      },
     ]);
 
     res.json({
@@ -543,6 +666,7 @@ async function getTeacherDashboard(req, res) {
 module.exports = {
   getTeachers,
   createCourse,
+  updateCourse,
   getTeacherCourses,
   getCourses,
   getTeacherCourses,
