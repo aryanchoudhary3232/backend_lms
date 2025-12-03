@@ -19,13 +19,50 @@ async function createAssignment(req, res) {
       allowLateSubmission,
       submissionType,
     } = req.body;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id; // Fixed: use _id instead of userId
+
+    console.log("Creating assignment with data:", {
+      title,
+      course,
+      teacherId,
+      maxMarks,
+      dueDate,
+    });
+
+    // Validate required fields
+    if (!course) {
+      return res.status(400).json({
+        success: false,
+        error: true,
+        message: "Course ID is required",
+      });
+    }
+
+    if (!title || !description) {
+      return res.status(400).json({
+        success: false,
+        error: true,
+        message: "Title and description are required",
+      });
+    }
 
     // Verify course belongs to teacher
     const courseDoc = await Course.findById(course);
     if (!courseDoc) {
-      return notFound(res, "Course");
+      console.log("Course not found:", course);
+      return res.status(404).json({
+        success: false,
+        error: true,
+        message: "Course not found",
+      });
     }
+
+    console.log("Course found:", {
+      courseId: courseDoc._id,
+      courseTeacher: courseDoc.teacher,
+      requestTeacher: teacherId,
+    });
+
     if (courseDoc.teacher.toString() !== teacherId.toString()) {
       return res.status(403).json({
         success: false,
@@ -50,16 +87,18 @@ async function createAssignment(req, res) {
       course,
       chapter,
       teacher: teacherId,
-      maxMarks,
+      maxMarks: Number(maxMarks) || 100,
       dueDate: new Date(dueDate),
       attachments,
       allowLateSubmission:
         allowLateSubmission === "true" || allowLateSubmission === true,
-      submissionType,
+      submissionType: submissionType || "both",
       status: "active",
     });
 
     await assignment.save();
+
+    console.log("Assignment created successfully:", assignment._id);
 
     return res.status(201).json({
       success: true,
@@ -69,10 +108,12 @@ async function createAssignment(req, res) {
     });
   } catch (error) {
     console.error("createAssignment error:", error);
+    console.error("Error stack:", error.stack);
     return res.status(500).json({
       success: false,
       error: true,
-      message: "Server error while creating assignment",
+      message: error.message || "Server error while creating assignment",
+      details: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 }
@@ -80,7 +121,7 @@ async function createAssignment(req, res) {
 // Get Teacher's Assignments
 async function getTeacherAssignments(req, res) {
   try {
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
     const { courseId } = req.query;
 
     const query = { teacher: teacherId };
@@ -132,7 +173,7 @@ async function getTeacherAssignments(req, res) {
 async function getAssignmentSubmissions(req, res) {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
 
     // Verify assignment belongs to teacher
     const assignment = await Assignment.findById(assignmentId);
@@ -175,7 +216,7 @@ async function gradeSubmission(req, res) {
   try {
     const { submissionId } = req.params;
     const { marks, feedback } = req.body;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
 
     const submission = await Submission.findById(submissionId).populate(
       "assignment"
@@ -233,7 +274,7 @@ async function gradeSubmission(req, res) {
 async function updateAssignment(req, res) {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
     const updates = req.body;
 
     const assignment = await Assignment.findById(assignmentId);
@@ -271,7 +312,7 @@ async function updateAssignment(req, res) {
 async function deleteAssignment(req, res) {
   try {
     const { assignmentId } = req.params;
-    const teacherId = req.user.userId;
+    const teacherId = req.user._id;
 
     const assignment = await Assignment.findById(assignmentId);
     if (!assignment) {
@@ -311,7 +352,7 @@ async function deleteAssignment(req, res) {
 // Get Student's Assignments
 async function getStudentAssignments(req, res) {
   try {
-    const studentId = req.user.userId;
+    const studentId = req.user._id;
     const { courseId, status } = req.query;
 
     // Get enrolled courses
@@ -391,7 +432,7 @@ async function submitAssignment(req, res) {
   try {
     const { assignmentId } = req.params;
     const { textContent } = req.body;
-    const studentId = req.user.userId;
+    const studentId = req.user._id;
 
     const assignment = await Assignment.findById(assignmentId);
     if (!assignment) {
@@ -464,7 +505,7 @@ async function submitAssignment(req, res) {
 async function getStudentSubmission(req, res) {
   try {
     const { assignmentId } = req.params;
-    const studentId = req.user.userId;
+    const studentId = req.user._id;
 
     const submission = await Submission.findOne({
       assignment: assignmentId,
