@@ -358,13 +358,15 @@ async function deleteAssignment(req, res) {
 async function getStudentEnrolledCourseIds(studentId) {
   const Student = require("../models/Student");
   const student = await Student.findById(studentId).select("enrolledCourses");
-  
+
   if (!student) {
     throw new Error("Student profile not found");
   }
-  
-  // Ensure enrolledCourses exists and map to strings
-  return (student.enrolledCourses || []).map((c) => c.toString());
+
+  // enrolledCourses is an array of objects with 'course' field
+  return (student.enrolledCourses || []).map((enrollment) =>
+    enrollment.course ? enrollment.course.toString() : enrollment.toString()
+  );
 }
 
 /**
@@ -379,7 +381,7 @@ function buildAssignmentQuery(enrolledCourseIds, filterCourseId) {
     course: { $in: enrolledCourseIds },
     status: "active",
   };
-  
+
   if (filterCourseId) {
     query.course = filterCourseId;
   }
@@ -428,9 +430,10 @@ async function getStudentAssignments(req, res) {
       enrolledCourseIds = await getStudentEnrolledCourseIds(studentId);
     } catch (err) {
       console.error("Error fetching student profile:", err.message);
-      return res.status(404).json({ 
-        success: false, 
-        message: "Student profile not found. Please ensure you are logged in as a student." 
+      return res.status(404).json({
+        success: false,
+        message:
+          "Student profile not found. Please ensure you are logged in as a student.",
       });
     }
 
@@ -444,7 +447,7 @@ async function getStudentAssignments(req, res) {
 
     // 2. Build Query and Fetch Assignments
     const query = buildAssignmentQuery(enrolledCourseIds, courseId);
-    
+
     const assignments = await Assignment.find(query)
       .populate("course", "title")
       .populate("teacher", "name")
@@ -452,7 +455,9 @@ async function getStudentAssignments(req, res) {
 
     // 3. Enrich with Submission Status
     const assignmentsWithStatus = await Promise.all(
-      assignments.map((assignment) => enrichAssignmentWithStatus(assignment, studentId))
+      assignments.map((assignment) =>
+        enrichAssignmentWithStatus(assignment, studentId)
+      )
     );
 
     // 4. Filter Results based on status query param
