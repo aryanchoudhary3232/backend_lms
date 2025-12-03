@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {upload} = require('../utils/multer')
+const { upload } = require("../utils/multer");
 const teacherController = require("../controller/teacherController");
 const { verify, verifyTeacher } = require("../middleware/verify");
 
@@ -20,7 +20,7 @@ router.put(
   teacherController.updateCourse
 );
 
-router.get('/courses',verify, teacherController.getTeacherCourses)
+router.get("/courses", verify, teacherController.getTeacherCourses);
 
 // NEW: teacher qualification verification
 router.post(
@@ -31,15 +31,20 @@ router.post(
   teacherController.uploadQualification
 );
 
-
-router.get("/verification/status",
+router.get(
+  "/verification/status",
   verify,
   verifyTeacher,
   teacherController.getQualificationStatus
 );
 
 // Get teacher-specific courses
-router.get("/courses", verify, verifyTeacher, teacherController.getTeacherCourses);
+router.get(
+  "/courses",
+  verify,
+  verifyTeacher,
+  teacherController.getTeacherCourses
+);
 
 router.get("/courses/get_courses", teacherController.getCourses);
 router.get(
@@ -47,15 +52,13 @@ router.get(
   teacherController.getcourseById
 );
 
-
-
 //teacher
 router.get("/", teacherController.getTeachers);
 
 //routes for dashboard metrics
 router.get("/metrics", verify, teacherController.getTeacherMetrics);
 
-router.get('/students',verify, teacherController.getEnrolledStudents)
-router.get('/dashboard', verify, teacherController.getTeacherDashboard)
+router.get("/students", verify, teacherController.getEnrolledStudents);
+router.get("/dashboard", verify, teacherController.getTeacherDashboard);
 
 module.exports = router;

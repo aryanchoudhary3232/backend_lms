@@ -127,7 +127,7 @@ async function updateCourse(req, res) {
     // Handle chapters if provided
     if (req.body.chapters) {
       let chapters = JSON.parse(req.body.chapters);
-      
+
       const newChapters = chapters.map((chapter, chapterIdx) => {
         return {
           _id: chapter._id, // Keep existing ID if updating
@@ -135,8 +135,10 @@ async function updateCourse(req, res) {
           topics: chapter.topics.map((topic, topicIdx) => {
             // Check if there's a new video file for this topic
             const fileKey = `chapters[${chapterIdx}][topics][${topicIdx}][video]`;
-            const topicVideoFile = req.files?.find((f) => f.fieldname === fileKey);
-            
+            const topicVideoFile = req.files?.find(
+              (f) => f.fieldname === fileKey
+            );
+
             return {
               _id: topic._id, // Keep existing ID if updating
               title: topic.title,
@@ -146,15 +148,13 @@ async function updateCourse(req, res) {
           }),
         };
       });
-      
+
       updateData.chapters = newChapters;
     }
 
-    const updatedCourse = await Course.findByIdAndUpdate(
-      courseId,
-      updateData,
-      { new: true }
-    );
+    const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
+      new: true,
+    });
 
     res.json({
       message: "Course updated successfully",
