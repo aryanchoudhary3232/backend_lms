@@ -12,6 +12,14 @@ router.post(
   teacherController.createCourse
 );
 
+// Update course
+router.put(
+  "/courses/:courseId",
+  verify,
+  upload.any(),
+  teacherController.updateCourse
+);
+
 router.get('/courses',verify, teacherController.getTeacherCourses)
 
 // NEW: teacher qualification verification
