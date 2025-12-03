@@ -424,7 +424,7 @@ async function getStreakStats(req, res) {
     const studentId = req.user._id;
 
     const student = await Student.findById(studentId).select(
-      "streak bestStreak lastActiveDateStreak"
+      "streak bestStreak lastActiveDateStreak studentProgress"
     );
 
     // Count unique dates when the student submitted quizzes
@@ -441,9 +441,30 @@ async function getStreakStats(req, res) {
 
     const quizDays = uniqueQuizDates.size;
 
-    // For active days we currently approximate using quizDays.
-    // If you track other activity timestamps later (logins, page views), combine them here.
-    const activeDays = quizDays;
+    // Count unique active days from student progress (learning sessions) + quiz days
+    const uniqueActiveDates = new Set();
+    
+    // Add quiz submission dates
+    submissions.forEach((s) => {
+      const d = new Date(s.submittedAt);
+      uniqueActiveDates.add(d.toISOString().slice(0, 10));
+    });
+    
+    // Add student progress dates (learning session dates)
+    if (student.studentProgress && student.studentProgress.length > 0) {
+      student.studentProgress.forEach((progress) => {
+        const d = new Date(progress.date);
+        uniqueActiveDates.add(d.toISOString().slice(0, 10));
+      });
+    }
+    
+    // If student has lastActiveDateStreak, include that as well
+    if (student.lastActiveDateStreak) {
+      const d = new Date(student.lastActiveDateStreak);
+      uniqueActiveDates.add(d.toISOString().slice(0, 10));
+    }
+
+    const activeDays = uniqueActiveDates.size;
 
     return res.json({
       success: true,
