@@ -486,10 +486,30 @@ async function getStreakStats(req, res) {
 
 async function studentProgress(req, res) {
   try {
-    const { minutes } = req.body;
+    // Handle both JSON and FormData (for navigator.sendBeacon)
+    let minutes;
+    
+    if (req.body.minutes) {
+      minutes = req.body.minutes;
+    } else if (req.body && typeof req.body === 'string') {
+      // Handle raw string data from beacon
+      try {
+        const parsed = JSON.parse(req.body);
+        minutes = parsed.minutes;
+      } catch (e) {
+        minutes = parseInt(req.body);
+      }
+    } else {
+      minutes = req.body;
+    }
+    
+    // Convert to number if it's a string
+    if (typeof minutes === 'string') {
+      minutes = parseInt(minutes);
+    }
     
     // Validate input
-    if (!minutes || typeof minutes !== 'number' || minutes <= 0) {
+    if (!minutes || typeof minutes !== 'number' || minutes <= 0 || isNaN(minutes)) {
       return res.status(400).json({
         message: "Invalid minutes value",
         success: false,
