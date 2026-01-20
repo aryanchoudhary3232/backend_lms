@@ -1,12 +1,38 @@
 const mongoose = require("mongoose");
 
 const courseSchema = new mongoose.Schema({
-  title: { type: String },
-  description: { type: String },
-  category: { type: String },
-  level: { type: String, enum: ["Beginner", "Intermediate", "Advance"] },
-  duration: { type: Number },
-  price: { type: Number },
+  title: {
+    type: String,
+    required: [true, "Course title is required"],
+    trim: true,
+    maxlength: [200, "Title cannot exceed 200 characters"]
+  },
+  description: {
+    type: String,
+    trim: true
+  },
+  category: {
+    type: String,
+    required: [true, "Course category is required"],
+    trim: true
+  },
+  level: {
+    type: String,
+    enum: {
+      values: ["Beginner", "Intermediate", "Advance"],
+      message: "Level must be Beginner, Intermediate, or Advance"
+    },
+    default: "Beginner"
+  },
+  duration: {
+    type: Number,
+    min: [0, "Duration cannot be negative"]
+  },
+  price: {
+    type: Number,
+    required: [true, "Course price is required"],
+    min: [0, "Price cannot be negative"]
+  },
   image: { type: String },
   video: { type: String },
   notes: { type: String },
@@ -14,6 +40,7 @@ const courseSchema = new mongoose.Schema({
   teacher: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Teacher",
+    required: [true, "Course must have a teacher"]
   },
 
   students: [
@@ -27,8 +54,12 @@ const courseSchema = new mongoose.Schema({
   ratings: [
     {
       student: { type: mongoose.Schema.Types.ObjectId, ref: "Student" },
-      rating: { type: Number },
-      review: { type: String },
+      rating: {
+        type: Number,
+        min: [1, "Rating must be at least 1"],
+        max: [5, "Rating cannot exceed 5"]
+      },
+      review: { type: String, trim: true },
       createdAt: { type: Date, default: Date.now },
     },
   ],
@@ -37,15 +68,18 @@ const courseSchema = new mongoose.Schema({
     {
       title: {
         type: String,
+        required: [true, "Chapter title is required"],
+        trim: true
       },
       topics: [
         {
-          title: String,
+          title: { type: String, trim: true },
           video: String,
           quiz: [
             {
               question: {
                 type: String,
+                required: [true, "Quiz question is required"]
               },
               options: [
                 {
@@ -55,7 +89,8 @@ const courseSchema = new mongoose.Schema({
               correctOption: {
                 type: String,
               },
-              explaination: {
+              // Fixed typo: was "explaination"
+              explanation: {
                 type: String,
               },
             },
@@ -64,7 +99,14 @@ const courseSchema = new mongoose.Schema({
       ],
     },
   ],
+}, {
+  timestamps: true // Adds createdAt and updatedAt automatically
 });
+
+// Index for faster queries
+courseSchema.index({ teacher: 1 });
+courseSchema.index({ category: 1 });
+courseSchema.index({ level: 1 });
 
 const Course = mongoose.model("Course", courseSchema);
 

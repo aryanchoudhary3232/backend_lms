@@ -4,6 +4,15 @@ const Student = require("../models/Student");
 const Teacher = require("../models/Teacher");
 const Admin = require("../models/Admin");
 
+// JWT Configuration from environment variables
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+
+if (!JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET environment variable is not set!");
+  process.exit(1);
+}
+
 // 🔹 Register User (Student / Teacher / Admin)
 async function register(req, res) {
   try {
@@ -59,21 +68,11 @@ async function register(req, res) {
     });
   } catch (error) {
     console.error("Registration error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error during registration",
+      success: false,
+      error: true,
     });
-
-    const admin = await Admin.findOne({ email });
-    const student = await Student.findOne({ email });
-    const teacher = await Teacher.findOne({ email });
-
-    if (!admin && !student && !teacher) {
-      res.json({
-        message: "User does not exist.",
-        success: false,
-        error: true,
-      });
-    }
   }
 }
 
@@ -114,14 +113,15 @@ async function login(req, res) {
       });
     }
 
-    // ✅ Generate token
+    // ✅ Generate token with expiration
     const token = jwt.sign(
       {
         _id: user._id,
         role: user.role,
         email: user.email,
       },
-      "aryan123"
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     // Inside login function, before sending response...
@@ -132,9 +132,9 @@ async function login(req, res) {
 
     if (lastLoginDate) {
       lastLoginDate = new Date(lastLoginDate.getFullYear(), lastLoginDate.getMonth(), lastLoginDate.getDate());
-      
+
       const diffTime = Math.abs(today - lastLoginDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
       if (diffDays === 1) {
         // Login is consecutive (yesterday)

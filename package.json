@@ -23,8 +23,6 @@
     "mongoose": "^8.18.1",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
-    "nodemon": "^3.1.10",
-    "react-router-dom": "^7.9.4",
-    "recharts": "^3.4.1"
+    "nodemon": "^3.1.10"
   }
 }

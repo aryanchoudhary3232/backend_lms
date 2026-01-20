@@ -172,30 +172,6 @@ async function updateCourse(req, res) {
   }
 }
 
-async function getTeacherCourses(req, res) {
-  try {
-    const teacherCourses = await Teacher.findById(req.user._id)
-      .populate({
-        path: "courses",
-      })
-      .select("courses");
-
-    res.json({
-      message: "Teacher courses retrieved successfully",
-      data: teacherCourses,
-      success: true,
-      error: false,
-    });
-  } catch (error) {
-    console.log("err occurred...", error);
-    res.json({
-      message: error.message || "Teacher courses failed",
-      success: false,
-      error: true,
-    });
-  }
-}
-
 async function getCourses(req, res) {
   const courses = await Course.find();
 
@@ -425,8 +401,8 @@ async function uploadQualification(req, res) {
     const resourceType = mimetype.startsWith("video")
       ? "video"
       : mimetype.startsWith("image")
-      ? "image"
-      : "raw";
+        ? "image"
+        : "raw";
     const format = (path.extname(originalname || "") || "").replace(".", "");
 
     const update = {
@@ -580,8 +556,8 @@ async function getTeacherDashboard(req, res) {
     const avgRating =
       allRatings.length > 0
         ? (
-            allRatings.reduce((a, b) => a + b.rating, 0) / allRatings.length
-          ).toFixed(1)
+          allRatings.reduce((a, b) => a + b.rating, 0) / allRatings.length
+        ).toFixed(1)
         : 0;
 
     // 💡 Course enrollment chart
@@ -669,7 +645,6 @@ module.exports = {
   updateCourse,
   getTeacherCourses,
   getCourses,
-  getTeacherCourses,
   getcourseById,
   uploadQualification,
   getQualificationStatus,

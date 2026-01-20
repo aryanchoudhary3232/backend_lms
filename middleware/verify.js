@@ -1,6 +1,13 @@
 const jwt = require("jsonwebtoken");
 const Admin = require("../models/Admin");
 
+// Validate JWT_SECRET is configured
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET environment variable is not set!");
+  process.exit(1);
+}
+
 // 🔹 Middleware to verify any logged-in user (Student / Teacher / Admin)
 function verify(req, res, next) {
   try {
@@ -11,7 +18,7 @@ function verify(req, res, next) {
 
     // ✅ Extract and verify token
     const token = authHeader.split(" ")[1]; // Correct extraction
-    const payload = jwt.verify(token, "aryan123"); // Secret key
+    const payload = jwt.verify(token, JWT_SECRET);
 
     req.user = payload; // Attach payload to request
     next();
@@ -30,7 +37,7 @@ async function verifyAdmin(req, res, next) {
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, "aryan123");
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     // ✅ Optional: Check admin exists in DB
     const admin = await Admin.findById(decoded._id);
