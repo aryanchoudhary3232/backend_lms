@@ -4,13 +4,27 @@ const Admin = require("../models/Admin");
 // 🔹 Middleware to verify any logged-in user (Student / Teacher / Admin)
 function verify(req, res, next) {
   try {
+    let token;
+    
+    // Check for token in Authorization header first
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    if (authHeader) {
+      token = authHeader.split(" ")[1];
+    }
+    // If no auth header, check query params (for sendBeacon)
+    else if (req.query.token) {
+      token = req.query.token;
+    }
+    // Also check if token is in the body (for sendBeacon with JSON)
+    else if (req.body && req.body.token) {
+      token = req.body.token;
+    }
+    
+    if (!token) {
       return res.status(401).json({ message: "Access denied, no token provided" });
     }
 
     // ✅ Extract and verify token
-    const token = authHeader.split(" ")[1]; // Correct extraction
     const payload = jwt.verify(token, "aryan123"); // Secret key
 
     req.user = payload; // Attach payload to request

@@ -277,6 +277,51 @@ async function getEnrolledCourses(req, res) {
   }
 }
 
+async function getStudentMyCourses(req, res) {
+  try {
+    const studentId = req.user._id;
+
+    const student = await Student.findById(studentId).populate({
+      path: "enrolledCourses.course",
+      select: "title description price image category level teacher chapters",
+      populate: {
+        path: "teacher",
+        select: "name email",
+      },
+    });
+
+    if (!student) {
+      return res.status(404).json({
+        message: "Student not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Extract just the course data from enrolledCourses
+    const courses = student.enrolledCourses.map(enrollment => ({
+      ...enrollment.course.toObject(),
+      enrolledAt: enrollment.enrolledAt,
+      quizScores: enrollment.quizScores,
+      completedTopics: enrollment.completedTopics,
+    }));
+
+    res.json({
+      message: "My courses retrieved successfully",
+      data: courses,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Error fetching my courses:", error);
+    res.status(500).json({
+      message: "Error fetching my courses",
+      success: false,
+      error: true,
+    });
+  }
+}
+
 async function quizSubmission(req, res) {
   try {
     const { courseId, chapterId, topicId, answerQuiz } = req.body;
@@ -486,21 +531,15 @@ async function getStreakStats(req, res) {
 
 async function studentProgress(req, res) {
   try {
-    // Handle both JSON and FormData (for navigator.sendBeacon)
+    // Handle both JSON and query params (for navigator.sendBeacon)
     let minutes;
+    let studentId;
     
-    if (req.body.minutes) {
+    // Check if minutes is in body or query
+    if (req.body && req.body.minutes) {
       minutes = req.body.minutes;
-    } else if (req.body && typeof req.body === 'string') {
-      // Handle raw string data from beacon
-      try {
-        const parsed = JSON.parse(req.body);
-        minutes = parsed.minutes;
-      } catch (e) {
-        minutes = parseInt(req.body);
-      }
-    } else {
-      minutes = req.body;
+    } else if (req.query && req.query.minutes) {
+      minutes = req.query.minutes;
     }
     
     // Convert to number if it's a string
@@ -510,6 +549,7 @@ async function studentProgress(req, res) {
     
     // Validate input
     if (!minutes || typeof minutes !== 'number' || minutes <= 0 || isNaN(minutes)) {
+      console.error('Invalid minutes value:', req.body, req.query);
       return res.status(400).json({
         message: "Invalid minutes value",
         success: false,
@@ -517,7 +557,16 @@ async function studentProgress(req, res) {
       });
     }
     
-    const studentId = req.user._id;
+    // Get student ID from req.user (set by verify middleware)
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        message: "Authentication required",
+        success: false,
+        error: true,
+      });
+    }
+    
+    studentId = req.user._id;
     const student = await Student.findById(studentId);
     
     if (!student) {
@@ -535,11 +584,13 @@ async function studentProgress(req, res) {
     
     if (todayStudentProgress) {
       todayStudentProgress.minutes += minutes;
+      console.log(`✅ Updated progress for ${student.name}: +${minutes} min (Total today: ${todayStudentProgress.minutes} min)`);
     } else {
       student.studentProgress.push({ 
         date: new Date(today), 
         minutes: minutes 
       });
+      console.log(`✅ Created new progress entry for ${student.name}: ${minutes} min`);
     }
 
     await student.save();
@@ -548,7 +599,8 @@ async function studentProgress(req, res) {
       message: "Learning progress saved successfully",
       data: {
         totalMinutesToday: todayStudentProgress ? todayStudentProgress.minutes : minutes,
-        date: today
+        date: today,
+        studentName: student.name
       },
       success: true,
       error: false,
@@ -927,6 +979,7 @@ module.exports = {
   getCourseById,
   enrollInCourse,
   getEnrolledCourses,
+  getStudentMyCourses,
   getQuizSubmissions,
   quizSubmission,
   getCoursesByStudentId,
