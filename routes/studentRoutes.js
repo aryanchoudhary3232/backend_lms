@@ -15,6 +15,7 @@ router.get("/test", (req, res) => {
 router.get("/", studentController.getStudents);
 router.get('/profile', verify, studentController.studentProfile)
 router.get('/dashboard', verify, studentController.getStudentDashboard)
+router.get('/my-courses', verify, studentController.getStudentMyCourses)
 router.put('/update-enrollCourses',verify, studentController.updateEnrollCourses)
 router.post('/quiz_submit',verify, studentController.quizSubmission)
 
