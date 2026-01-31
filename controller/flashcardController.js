@@ -196,8 +196,8 @@ exports.getCourseDecks = async (req, res) => {
       courseId,
       isPublished: true
     })
-    .populate('createdBy', 'name')
-    .select('-cards.hints');
+      .populate('createdBy', 'name')
+      .select('-cards.hints');
 
     respond(res, 200, true, 'Decks retrieved', decks);
   } catch (error) {
@@ -236,28 +236,5 @@ exports.deleteDeck = async (req, res) => {
     respond(res, 200, true, 'Deck deleted');
   } catch (error) {
     respond(res, 500, false, error.message);
-  }
-};
-
-// Get decks for a course (Student view)
-exports.getCourseDecks = async (req, res) => {
-  try {
-    const { courseId } = req.params;
-    
-    if (!courseId) {
-        return respond(res, 400, false, 'Course ID is required');
-    }
-
-    // Fetch published decks for the course
-    const decks = await Flashcard.find({ 
-        courseId: courseId, 
-        isPublished: true 
-    })
-    .select('-cards'); // List view, omit cards details
-
-    return respond(res, 200, true, 'Course decks retrieved', decks);
-  } catch (error) {
-    console.error("Error in getCourseDecks:", error);
-    return respond(res, 500, false, error.message);
   }
 };

@@ -126,7 +126,7 @@ async function updateEnrollCourses(req, res) {
     });
   } catch (error) {
     console.log("err occured...", error);
-    res.json({
+    res.status(500).json({
       message: error?.message || error,
       success: false,
       error: true,
@@ -330,7 +330,33 @@ async function quizSubmission(req, res) {
     const studentId = req.user._id;
 
     const course = await Course.findById(courseId);
-    const originalQuiz = course.chapters.id(chapterId).topics.id(topicId).quiz;
+    if (!course) {
+      return res.status(404).json({
+        message: "Course not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    const chapter = course.chapters.id(chapterId);
+    if (!chapter) {
+      return res.status(404).json({
+        message: "Chapter not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    const topic = chapter.topics.id(topicId);
+    if (!topic) {
+      return res.status(404).json({
+        message: "Topic not found",
+        success: false,
+        error: true,
+      });
+    }
+
+    const originalQuiz = topic.quiz;
 
     let correct = 0;
     const quiz = originalQuiz.map((q) => {
@@ -713,15 +739,18 @@ async function getStudentDashboard(req, res) {
     }
 
     // Calculate quiz statistics for each enrolled course (filter out null courses from deleted references)
-    const validEnrollments = student.enrolledCourses.filter(enrollment => enrollment.course != null);
+    const validEnrollments = student.enrolledCourses.filter(enrollment =>
+      enrollment.course != null && enrollment.course._id != null
+    );
     const enrolledCoursesWithStats = await Promise.all(validEnrollments.map(async enrollment => {
       const quizScores = enrollment.quizScores || [];
       const avgQuizScore = quizScores.length > 0
         ? Math.round(quizScores.reduce((sum, score) => sum + (score.score || 0), 0) / quizScores.length)
         : 0;
 
-      // Get total topics for this course
-      const totalTopics = await getTotalTopicsInCourse(enrollment.course._id);
+      // Get total topics for this course (handle potential null)
+      const courseId = enrollment.course._id || enrollment.course;
+      const totalTopics = await getTotalTopicsInCourse(courseId);
       const completedTopicsCount = enrollment.completedTopics ? enrollment.completedTopics.length : 0;
 
       return {

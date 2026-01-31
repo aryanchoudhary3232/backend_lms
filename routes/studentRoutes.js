@@ -16,18 +16,17 @@ router.get("/", studentController.getStudents);
 router.get('/profile', verify, studentController.studentProfile)
 router.get('/dashboard', verify, studentController.getStudentDashboard)
 router.get('/my-courses', verify, studentController.getStudentMyCourses)
-router.put('/update-enrollCourses',verify, studentController.updateEnrollCourses)
-router.post('/quiz_submit',verify, studentController.quizSubmission)
+router.put('/update-enrollCourses', verify, studentController.updateEnrollCourses)
+router.post('/quiz_submit', verify, studentController.quizSubmission)
 
-router.get('/courses',verify, studentController.getCoursesByStudentId)
+router.get('/courses', verify, studentController.getCoursesByStudentId)
 // Get student's quiz submissions (aggregated)
 router.get('/quiz-submissions', verify, studentController.getQuizSubmissions);
 
 // Streak / activity analytics
 router.get('/streak', verify, studentController.getStreakStats);
 
-// Course-related routes for students
-router.get("/courses", studentController.getAllCourses);
+// Course-related routes for students (public)
 router.get("/courses/:courseId", studentController.getCourseById);
 
 // Enrollment routes

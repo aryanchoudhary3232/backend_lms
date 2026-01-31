@@ -61,19 +61,9 @@ async function register(req, res) {
     console.error("Registration error:", error);
     res.status(500).json({
       message: "Server error during registration",
+      success: false,
+      error: true,
     });
-
-    const admin = await Admin.findOne({ email });
-    const student = await Student.findOne({ email });
-    const teacher = await Teacher.findOne({ email });
-
-    if (!admin && !student && !teacher) {
-      res.json({
-        message: "User does not exist.",
-        success: false,
-        error: true,
-      });
-    }
   }
 }
 
@@ -121,7 +111,7 @@ async function login(req, res) {
         role: user.role,
         email: user.email,
       },
-      "aryan123"
+      process.env.JWT_SECRET
     );
 
     // Inside login function, before sending response...
@@ -132,9 +122,9 @@ async function login(req, res) {
 
     if (lastLoginDate) {
       lastLoginDate = new Date(lastLoginDate.getFullYear(), lastLoginDate.getMonth(), lastLoginDate.getDate());
-      
+
       const diffTime = Math.abs(today - lastLoginDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
       if (diffDays === 1) {
         // Login is consecutive (yesterday)

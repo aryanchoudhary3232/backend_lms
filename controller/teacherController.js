@@ -72,7 +72,7 @@ async function createCourse(req, res) {
   });
 
   res.json({
-    message: "Course created succesfully",
+    message: "Course created successfully",
     data: response,
     success: true,
     error: false,
@@ -207,17 +207,6 @@ async function getCourses(req, res) {
   });
 }
 
-async function getTeacherCourses(req, res) {
-  const teacherId = req.user._id;
-  const courses = await Course.find({ teacher: teacherId });
-
-  res.json({
-    message: "Teacher courses retrieved",
-    data: courses,
-    success: true,
-    error: false,
-  });
-}
 
 async function getcourseById(req, res) {
   const course = await Course.findById(req.params.courseId, {
@@ -425,8 +414,8 @@ async function uploadQualification(req, res) {
     const resourceType = mimetype.startsWith("video")
       ? "video"
       : mimetype.startsWith("image")
-      ? "image"
-      : "raw";
+        ? "image"
+        : "raw";
     const format = (path.extname(originalname || "") || "").replace(".", "");
 
     const update = {
@@ -580,8 +569,8 @@ async function getTeacherDashboard(req, res) {
     const avgRating =
       allRatings.length > 0
         ? (
-            allRatings.reduce((a, b) => a + b.rating, 0) / allRatings.length
-          ).toFixed(1)
+          allRatings.reduce((a, b) => a + b.rating, 0) / allRatings.length
+        ).toFixed(1)
         : 0;
 
     // 💡 Course enrollment chart
@@ -669,7 +658,6 @@ module.exports = {
   updateCourse,
   getTeacherCourses,
   getCourses,
-  getTeacherCourses,
   getcourseById,
   uploadQualification,
   getQualificationStatus,

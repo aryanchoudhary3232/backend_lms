@@ -38,14 +38,6 @@ router.get(
   teacherController.getQualificationStatus
 );
 
-// Get teacher-specific courses
-router.get(
-  "/courses",
-  verify,
-  verifyTeacher,
-  teacherController.getTeacherCourses
-);
-
 router.get("/courses/get_courses", teacherController.getCourses);
 router.get(
   "/courses/get_course_by_id/:courseId",

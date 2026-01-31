@@ -1,13 +1,14 @@
-const User = require('../models/Student'); // Adjust path to your User model
-const Course = require('../models/Course'); // Adjust path to your Course model
+const Student = require('../models/Student');
+const Teacher = require('../models/Teacher');
+const Course = require('../models/Course');
 
 exports.getPublicStats = async (req, res) => {
   try {
-    // 1. Count Students (users with role 'student')
-    const students = await User.countDocuments({ role: 'student' });
+    // 1. Count Students (from Student collection)
+    const students = await Student.countDocuments();
 
-    // 2. Count Instructors (users with role 'instructor' or 'teacher')
-    const instructors = await User.countDocuments({ role: 'instructor' });
+    // 2. Count Instructors (from Teacher collection)
+    const instructors = await Teacher.countDocuments();
 
     // 3. Count Materials (Total number of courses)
     const materials = await Course.countDocuments({});

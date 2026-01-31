@@ -16,15 +16,29 @@ const cartRoutes = require("./routes/cartRoutes");
 const flashcardRoutes = require('./routes/flashcardRoutes');
 const statsRoutes = require("./routes/statsRoutes");
 
-app.use(cors());
+// Validate required environment variables
+const requiredEnvVars = ['MONGO_URL_ATLAS', 'JWT_SECRET'];
+const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+  console.error(`FATAL ERROR: Missing required environment variables: ${missingVars.join(', ')}`);
+  process.exit(1);
+}
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production'
+    ? process.env.FRONTEND_URL || false
+    : true,
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-const MONGO_URL =
-  process.env.MONGO_URL_ATLAS ||
-  "mongodb+srv://aryan:aryan123@cluster0.qxutmim.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const MONGO_URL = process.env.MONGO_URL_ATLAS;
 
 mongoose
   .connect(MONGO_URL)
@@ -67,6 +81,7 @@ app.get("/", (req, res) => {
   res.send("Welcome to server");
 });
 
-app.listen(3000, () => {
-  console.log("backend server is running on port 3000....");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`backend server is running on port ${PORT}....`);
 });
