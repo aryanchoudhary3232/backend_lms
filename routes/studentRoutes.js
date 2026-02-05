@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const studentController = require("../controller/studentController");
-const { verify } = require("../middleware/verify");
+const { verify } = require("../middleware");
 
 // Test route
 router.get("/test", (req, res) => {
