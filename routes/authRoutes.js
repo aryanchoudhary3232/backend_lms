@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const authController = require('../controller/authController');
-const { verify } = require('../middleware/verify');
+const { verify } = require('../middleware');
 
 // ============================================
 // 🔹 PUBLIC ROUTES (No authentication required)

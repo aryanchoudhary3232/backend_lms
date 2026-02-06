@@ -1,11 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { verify } = require("../middleware/verify");
-const multer = require("multer");
-const { cloudinaryStorage } = require("../cloudinary");
-
-// Configure multer with cloudinary
-const upload = multer({ storage: cloudinaryStorage });
+const { verify, upload } = require("../middleware");
 
 const {
   createAssignment,
@@ -19,31 +14,21 @@ const {
   getStudentSubmission,
 } = require("../controller/assignmentController");
 
+// ===== ROUTER-BASED MIDDLEWARE =====
+// All assignment routes require authentication
+router.use(verify);
+
 // ============= TEACHER ROUTES =============
-router.post(
-  "/teacher/create",
-  verify,
-  upload.array("attachments", 5),
-  createAssignment
-);
-router.get("/teacher/list", verify, getTeacherAssignments);
-router.get(
-  "/teacher/:assignmentId/submissions",
-  verify,
-  getAssignmentSubmissions
-);
-router.post("/teacher/grade/:submissionId", verify, gradeSubmission);
-router.put("/teacher/update/:assignmentId", verify, updateAssignment);
-router.delete("/teacher/delete/:assignmentId", verify, deleteAssignment);
+router.post("/teacher/create", upload.array("attachments", 5), createAssignment);
+router.get("/teacher/list", getTeacherAssignments);
+router.get("/teacher/:assignmentId/submissions", getAssignmentSubmissions);
+router.post("/teacher/grade/:submissionId", gradeSubmission);
+router.put("/teacher/update/:assignmentId", updateAssignment);
+router.delete("/teacher/delete/:assignmentId", deleteAssignment);
 
 // ============= STUDENT ROUTES =============
-router.get("/student/list", verify, getStudentAssignments);
-router.post(
-  "/student/submit/:assignmentId",
-  verify,
-  upload.array("attachments", 3),
-  submitAssignment
-);
-router.get("/student/submission/:assignmentId", verify, getStudentSubmission);
+router.get("/student/list", getStudentAssignments);
+router.post("/student/submit/:assignmentId", upload.array("attachments", 3), submitAssignment);
+router.get("/student/submission/:assignmentId", getStudentSubmission);
 
 module.exports = router;

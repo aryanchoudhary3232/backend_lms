@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { upload } = require("../utils/multer");
 const teacherController = require("../controller/teacherController");
-const { verify, verifyTeacher } = require("../middleware/verify");
+const { verify, verifyTeacher, upload } = require("../middleware");
 
 // teacher courses
 router.post(

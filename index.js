@@ -3,6 +3,9 @@ const app = express();
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
+const morgan = require("morgan");
+const { errorHandler, notFound, performanceMonitor } = require("./middleware");
 require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
@@ -15,6 +18,26 @@ const contactRoutes = require("./routes/contactRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 const flashcardRoutes = require('./routes/flashcardRoutes');
 const statsRoutes = require("./routes/statsRoutes");
+
+// Logging middleware
+const logsDir = path.join(__dirname, "logs");
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+const accessLogStream = fs.createWriteStream(
+  path.join(logsDir, "access.log"),
+  { flags: "a" }
+);
+
+app.use(
+  morgan(process.env.NODE_ENV === "production" ? "combined" : "dev", {
+    stream: accessLogStream,
+  })
+);
+
+// Performance monitoring
+app.use(performanceMonitor);
 
 app.use(cors());
 app.use(express.json());
@@ -66,6 +89,10 @@ app.use("/stats", statsRoutes);
 app.get("/", (req, res) => {
   res.send("Welcome to server");
 });
+
+// Error handling middlewares (must be last)
+app.use(notFound);
+app.use(errorHandler);
 
 app.listen(3000, () => {
   console.log("backend server is running on port 3000....");

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const courseController = require('../controller/courseController')
-const { verify } = require('../middleware/verify')
+const { verify } = require('../middleware')
 const statsController = require('../controller/statsController');
 
 router.get('/', courseController.getAllCourses)
