@@ -4,6 +4,7 @@ const { upload, cloudinary } = require("./upload");
 const { errorHandler, notFound } = require("./errorHandler");
 const { requestLogger, errorOnlyLogger, performanceMonitor, rateLimitLogger } = require("./logger");
 const { validateEnrollment, validateResourceOwnership, verifyStudent } = require("./studentValidation");
+const { adminAuditLogger } = require("./adminAuditLogger");
 
 module.exports = {
   // Authentication middlewares
@@ -29,4 +30,7 @@ module.exports = {
   // Student validation middlewares
   validateEnrollment,
   validateResourceOwnership,
+
+  // Admin audit middleware
+  adminAuditLogger,
 };

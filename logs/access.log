@@ -63,3 +63,15 @@
 [0mGET /cart [36m304[0m 140.238 ms - -[0m
 [0mGET /assignments/student/list [32m200[0m 410.386 ms - 2454[0m
 [0mGET /assignments/student/list [36m304[0m 553.722 ms - -[0m
+[0mOPTIONS /auth/login [32m204[0m 2.476 ms - 0[0m
+[0mPOST /auth/login [32m200[0m 325.722 ms - 373[0m
+[0mOPTIONS /admin/dashboard [32m204[0m 0.472 ms - 0[0m
+[0mOPTIONS /admin/dashboard [32m204[0m 0.667 ms - 0[0m
+[0mGET /admin/dashboard [32m200[0m 216.002 ms - 124[0m
+[0mGET /admin/dashboard [36m304[0m 202.753 ms - -[0m
+[0mOPTIONS /admin/users [32m204[0m 0.352 ms - 0[0m
+[0mOPTIONS /admin/users [32m204[0m 0.162 ms - 0[0m
+[0mGET /admin/users [32m200[0m 160.260 ms - 10970[0m
+[0mGET /admin/users [36m304[0m 251.588 ms - -[0m
+[0mOPTIONS /admin/students/690dc73e8154db73f8363232 [32m204[0m 0.343 ms - 0[0m
+[0mDELETE /admin/students/690dc73e8154db73f8363232 [32m200[0m 224.554 ms - 57[0m

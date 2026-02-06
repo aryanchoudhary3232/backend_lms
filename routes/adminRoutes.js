@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { verify, verifyAdmin } = require("../middleware");
+const { verify, verifyAdmin, adminAuditLogger } = require("../middleware");
 const {
   getDashboardData,
   getAllUsers,
@@ -18,6 +18,9 @@ const {
 // All admin routes require authentication + admin role
 router.use(verify);
 router.use(verifyAdmin);
+
+// Log every admin action for audit trail
+router.use(adminAuditLogger);
 
 // 🟢 Admin Dashboard Data
 router.get("/dashboard", getDashboardData);
