@@ -57,7 +57,10 @@ function describeAction(method, url) {
   if (m === "PUT" && url.includes("/approve")) return "APPROVE_TEACHER";
   if (m === "PUT" && url.includes("/reject")) return "REJECT_TEACHER";
 
-  return `${m}_${url.split("?")[0].replace(/[^a-zA-Z0-9]/g, "_").toUpperCase()}`;
+  return `${m}_${url
+    .split("?")[0]
+    .replace(/[^a-zA-Z0-9]/g, "_")
+    .toUpperCase()}`;
 }
 
 /**
@@ -106,7 +109,9 @@ function adminAuditLogger(req, res, next) {
     // Also log to console in development
     if (process.env.NODE_ENV !== "production") {
       const icon = res.statusCode < 400 ? "🛡️" : "🚨";
-      console.log(`${icon} ADMIN AUDIT [${action}] by ${logEntry.admin.email} → ${res.statusCode} (${duration}ms)`);
+      console.log(
+        `${icon} ADMIN AUDIT [${action}] by ${logEntry.admin.email} → ${res.statusCode} (${duration}ms)`,
+      );
     }
 
     // Call the original res.json

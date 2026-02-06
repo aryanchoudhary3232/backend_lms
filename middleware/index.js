@@ -2,8 +2,17 @@
 const { verify, verifyAdmin, verifyTeacher } = require("./verify");
 const { upload, cloudinary } = require("./upload");
 const { errorHandler, notFound } = require("./errorHandler");
-const { requestLogger, errorOnlyLogger, performanceMonitor, rateLimitLogger } = require("./logger");
-const { validateEnrollment, validateResourceOwnership, verifyStudent } = require("./studentValidation");
+const {
+  requestLogger,
+  errorOnlyLogger,
+  performanceMonitor,
+  rateLimitLogger,
+} = require("./logger");
+const {
+  validateEnrollment,
+  validateResourceOwnership,
+  verifyStudent,
+} = require("./studentValidation");
 const { adminAuditLogger } = require("./adminAuditLogger");
 
 module.exports = {
