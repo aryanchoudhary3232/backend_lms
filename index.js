@@ -3,6 +3,7 @@ const app = express();
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 const morgan = require("morgan");
 const { errorHandler, notFound, performanceMonitor } = require("./middleware");
 require("dotenv").config();
@@ -19,7 +20,21 @@ const flashcardRoutes = require('./routes/flashcardRoutes');
 const statsRoutes = require("./routes/statsRoutes");
 
 // Logging middleware
-app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+const logsDir = path.join(__dirname, "logs");
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+const accessLogStream = fs.createWriteStream(
+  path.join(logsDir, "access.log"),
+  { flags: "a" }
+);
+
+app.use(
+  morgan(process.env.NODE_ENV === "production" ? "combined" : "dev", {
+    stream: accessLogStream,
+  })
+);
 
 // Performance monitoring
 app.use(performanceMonitor);

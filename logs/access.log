@@ -1,0 +1,8 @@
+[0mGET /courses [32m200[0m 146.321 ms - 8323[0m
+[0mGET /stats [32m200[0m 272.535 ms - 92[0m
+[0mGET /courses [36m304[0m 108.867 ms - -[0m
+[0mGET /stats [36m304[0m 239.936 ms - -[0m
+[0mOPTIONS /teacher/dashboard [32m204[0m 0.773 ms - 0[0m
+[0mOPTIONS /teacher/dashboard [32m204[0m 0.176 ms - 0[0m
+[0mGET /teacher/dashboard [32m200[0m 127.718 ms - 1009[0m
+[0mGET /teacher/dashboard [32m200[0m 141.599 ms - 1009[0m
