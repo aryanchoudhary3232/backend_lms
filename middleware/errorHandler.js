@@ -39,11 +39,19 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Multer errors
+  // Multer errors (MulterError instances)
   if (err.name === "MulterError") {
     return res.status(400).json({
       success: false,
       message: `File upload error: ${err.message}`,
+    });
+  }
+
+  // Multer fileFilter rejection (thrown as plain Error with "File type" message)
+  if (err.message && err.message.startsWith("File type")) {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
     });
   }
 
