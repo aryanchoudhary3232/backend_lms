@@ -1,6 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const { verify, verifyAdmin, adminAuditLogger } = require("../middleware");
+const {
+  verify,
+  verifyAdmin,
+  adminAuditLogger,
+  paramSanitizer,
+  validate,
+  schemas,
+} = require("../middleware");
 const {
   getDashboardData,
   getAllUsers,
@@ -19,6 +26,9 @@ const {
 router.use(verify);
 router.use(verifyAdmin);
 
+// Sanitize all :id params across admin routes
+router.use(paramSanitizer);
+
 // Log every admin action for audit trail
 router.use(adminAuditLogger);
 
@@ -31,11 +41,19 @@ router.get("/users", getAllUsers);
 // 👨‍🏫 Get Teacher Details by ID
 router.get("/teachers/:teacherId", getTeacherById);
 
-// ✅ Approve Teacher Verification
-router.put("/teachers/:teacherId/approve", approveTeacher);
+// ✅ Approve Teacher Verification (validate optional notes)
+router.put(
+  "/teachers/:teacherId/approve",
+  validate(schemas.approveRejectTeacher),
+  approveTeacher,
+);
 
-// ❌ Reject Teacher Verification
-router.put("/teachers/:teacherId/reject", rejectTeacher);
+// ❌ Reject Teacher Verification (validate optional notes)
+router.put(
+  "/teachers/:teacherId/reject",
+  validate(schemas.approveRejectTeacher),
+  rejectTeacher,
+);
 
 // ❌ Delete Teacher
 router.delete("/teachers/:teacherId", deleteTeacher);

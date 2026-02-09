@@ -14,6 +14,9 @@ const {
   verifyStudent,
 } = require("./studentValidation");
 const { adminAuditLogger } = require("./adminAuditLogger");
+const { paramSanitizer, validateParams } = require("./paramSanitizer");
+const { validate, schemas } = require("./inputValidator");
+const { validateFiles, fileConfigs } = require("./fileUploadValidator");
 
 module.exports = {
   // Authentication middlewares
@@ -42,4 +45,16 @@ module.exports = {
 
   // Admin audit middleware
   adminAuditLogger,
+
+  // Param sanitizer middlewares
+  paramSanitizer,
+  validateParams,
+
+  // Input validation middlewares
+  validate,
+  schemas,
+
+  // File upload validation middlewares
+  validateFiles,
+  fileConfigs,
 };

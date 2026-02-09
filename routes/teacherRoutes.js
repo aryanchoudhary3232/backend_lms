@@ -1,63 +1,94 @@
 const express = require("express");
 const router = express.Router();
 const teacherController = require("../controller/teacherController");
-const { verify, verifyTeacher, upload } = require("../middleware");
+const {
+  verify,
+  verifyTeacher,
+  upload,
+  paramSanitizer,
+  validate,
+  schemas,
+  validateFiles,
+  fileConfigs,
+} = require("../middleware");
 
-// teacher courses
+// ── Create course (with input + file validation) ──
 router.post(
   "/courses/create_course",
   verify,
+  verifyTeacher,
   upload.any(),
-  teacherController.createCourse
+  validate(schemas.createCourse),
+  validateFiles(fileConfigs.createCourse),
+  teacherController.createCourse,
 );
 
-// Update course
+// ── Update course (with param + input + file validation) ──
 router.put(
   "/courses/:courseId",
   verify,
+  verifyTeacher,
+  paramSanitizer,
   upload.any(),
-  teacherController.updateCourse
+  validate(schemas.updateCourse),
+  validateFiles(fileConfigs.updateCourse),
+  teacherController.updateCourse,
 );
 
-router.get("/courses", verify, teacherController.getTeacherCourses);
+// ── Teacher's own courses ──
+router.get(
+  "/courses",
+  verify,
+  verifyTeacher,
+  teacherController.getTeacherCourses,
+);
 
-// NEW: teacher qualification verification
+// ── Teacher qualification verification ──
 router.post(
   "/verification/upload",
   verify,
   verifyTeacher,
   upload.single("qualification"),
-  teacherController.uploadQualification
+  validateFiles(fileConfigs.qualificationUpload),
+  teacherController.uploadQualification,
 );
 
 router.get(
   "/verification/status",
   verify,
   verifyTeacher,
-  teacherController.getQualificationStatus
+  teacherController.getQualificationStatus,
 );
 
-// Get teacher-specific courses
-router.get(
-  "/courses",
-  verify,
-  verifyTeacher,
-  teacherController.getTeacherCourses
-);
-
+// ── Public routes (with param sanitization) ──
 router.get("/courses/get_courses", teacherController.getCourses);
 router.get(
   "/courses/get_course_by_id/:courseId",
-  teacherController.getcourseById
+  paramSanitizer,
+  teacherController.getcourseById,
 );
 
 //teacher
 router.get("/", teacherController.getTeachers);
 
-//routes for dashboard metrics
-router.get("/metrics", verify, teacherController.getTeacherMetrics);
-
-router.get("/students", verify, teacherController.getEnrolledStudents);
-router.get("/dashboard", verify, teacherController.getTeacherDashboard);
+// ── Dashboard routes (with verifyTeacher) ──
+router.get(
+  "/metrics",
+  verify,
+  verifyTeacher,
+  teacherController.getTeacherMetrics,
+);
+router.get(
+  "/students",
+  verify,
+  verifyTeacher,
+  teacherController.getEnrolledStudents,
+);
+router.get(
+  "/dashboard",
+  verify,
+  verifyTeacher,
+  teacherController.getTeacherDashboard,
+);
 
 module.exports = router;

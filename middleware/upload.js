@@ -1,6 +1,7 @@
 const multer = require("multer");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const cloudinary = require("cloudinary").v2;
+const { multerFileFilter, UPLOAD_LIMITS } = require("./fileUploadValidator");
 
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
@@ -26,6 +27,10 @@ const storage = new CloudinaryStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  fileFilter: multerFileFilter, // reject disallowed mime types immediately
+  limits: UPLOAD_LIMITS, // enforce max file size & count at stream level
+});
 
 module.exports = { upload, cloudinary };
