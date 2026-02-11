@@ -32,42 +32,42 @@ router.use(paramSanitizer);
 // Log every admin action for audit trail
 router.use(adminAuditLogger);
 
-// 🟢 Admin Dashboard Data
+//  Admin Dashboard Data
 router.get("/dashboard", getDashboardData);
 
-// 👥 Get All Users (Students + Teachers)
+//  Get All Users (Students + Teachers)
 router.get("/users", getAllUsers);
 
-// 👨‍🏫 Get Teacher Details by ID
+//  Get Teacher Details by ID
 router.get("/teachers/:teacherId", getTeacherById);
 
-// ✅ Approve Teacher Verification (validate optional notes)
+//  Approve Teacher Verification (validate optional notes)
 router.put(
   "/teachers/:teacherId/approve",
   validate(schemas.approveRejectTeacher),
   approveTeacher,
 );
 
-// ❌ Reject Teacher Verification (validate optional notes)
+//  Reject Teacher Verification (validate optional notes)
 router.put(
   "/teachers/:teacherId/reject",
   validate(schemas.approveRejectTeacher),
   rejectTeacher,
 );
 
-// ❌ Delete Teacher
+//  Delete Teacher
 router.delete("/teachers/:teacherId", deleteTeacher);
 
-// ❌ Delete Student
+//  Delete Student
 router.delete("/students/:studentId", deleteStudent);
 
-// �📚 Get All Courses
+//  Get All Courses
 router.get("/courses", getAllCourses);
 
-// 📖 Get Course by ID for Admin
+//  Get Course by ID for Admin
 router.get("/courses/:courseId", getCourseById);
 
-// ❌ Delete a Course
+//  Delete a Course
 router.delete("/courses/:id", deleteCourse);
 
 module.exports = router;

@@ -5,13 +5,13 @@ const authController = require('../controller/authController');
 const { verify } = require('../middleware');
 
 // ============================================
-// 🔹 PUBLIC ROUTES (No authentication required)
+//  PUBLIC ROUTES (No authentication required)
 // ============================================
 router.post("/register", authController.register);
 router.post('/login', authController.login);
 
 // ============================================
-// 🔹 PROTECTED ROUTES (Authentication required)
+//  PROTECTED ROUTES (Authentication required)
 // ============================================
 
 // Profile Management - Works for all roles (Student, Teacher, Admin)

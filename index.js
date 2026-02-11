@@ -1,4 +1,5 @@
 const express = require("express");
+require("dotenv").config(); // Load environment variables FIRST
 const app = express();
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -6,7 +7,6 @@ const path = require("path");
 const fs = require("fs");
 const morgan = require("morgan");
 const { errorHandler, notFound, performanceMonitor } = require("./middleware");
-require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
 const courseRoutes = require("./routes/courseRoutes");
