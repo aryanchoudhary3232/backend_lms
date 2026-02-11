@@ -114,7 +114,7 @@ async function login(req, res) {
       });
     }
 
-    // ✅ Generate token
+    //  Generate token
     const token = jwt.sign(
       {
         _id: user._id,

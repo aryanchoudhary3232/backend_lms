@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const Admin = require("../models/Admin");
 
-// 🔹 Middleware to verify any logged-in user (Student / Teacher / Admin)
+//  Middleware to verify any logged-in user (Student / Teacher / Admin)
 function verify(req, res, next) {
   try {
     let token;
@@ -11,11 +11,11 @@ function verify(req, res, next) {
     if (authHeader) {
       token = authHeader.split(" ")[1];
     }
-    // If no auth header, check query params (for sendBeacon)
+    // If no auth header, check query params 
     else if (req.query.token) {
       token = req.query.token;
     }
-    // Also check if token is in the body (for sendBeacon with JSON)
+    // Also check if token is in the body
     else if (req.body && req.body.token) {
       token = req.body.token;
     }
@@ -24,7 +24,7 @@ function verify(req, res, next) {
       return res.status(401).json({ message: "Access denied, no token provided" });
     }
 
-    // ✅ Extract and verify token
+    // Extract and verify token
     const payload = jwt.verify(token, "aryan123"); // Secret key
 
     req.user = payload; // Attach payload to request
@@ -35,7 +35,7 @@ function verify(req, res, next) {
   }
 }
 
-// 🔹 Middleware to verify Admin only
+//  Middleware to verify Admin only
 async function verifyAdmin(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
@@ -46,7 +46,7 @@ async function verifyAdmin(req, res, next) {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, "aryan123");
 
-    // ✅ Optional: Check admin exists in DB
+    // Optional: Check admin exists in DB
     const admin = await Admin.findById(decoded._id);
     if (!admin || admin.role.toLowerCase() !== "admin") {
       return res.status(403).json({ message: "Access denied, Admins only" });
@@ -60,7 +60,7 @@ async function verifyAdmin(req, res, next) {
   }
 }
 
-// 🔹 Middleware to verify Teacher only
+// Middleware to verify Teacher only
 function verifyTeacher(req, res, next) {
   try {
     if (!req.user) {
