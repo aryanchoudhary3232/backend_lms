@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { verify, upload } = require("../middleware");
+const { verify, upload, validateFiles, fileConfigs } = require("../middleware");
 
 const {
   createAssignment,
@@ -19,7 +19,12 @@ const {
 router.use(verify);
 
 // ============= TEACHER ROUTES =============
-router.post("/teacher/create", upload.array("attachments", 5), createAssignment);
+router.post(
+  "/teacher/create",
+  upload.array("attachments", 5),
+  validateFiles(fileConfigs.teacherCreateAssignment),
+  createAssignment
+);
 router.get("/teacher/list", getTeacherAssignments);
 router.get("/teacher/:assignmentId/submissions", getAssignmentSubmissions);
 router.post("/teacher/grade/:submissionId", gradeSubmission);
@@ -28,7 +33,12 @@ router.delete("/teacher/delete/:assignmentId", deleteAssignment);
 
 // ============= STUDENT ROUTES =============
 router.get("/student/list", getStudentAssignments);
-router.post("/student/submit/:assignmentId", upload.array("attachments", 3), submitAssignment);
+router.post(
+  "/student/submit/:assignmentId",
+  upload.array("attachments", 3),
+  validateFiles(fileConfigs.studentSubmitAssignment),
+  submitAssignment
+);
 router.get("/student/submission/:assignmentId", getStudentSubmission);
 
 module.exports = router;

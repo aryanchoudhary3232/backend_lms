@@ -35,7 +35,19 @@ const MIME = {
     "video/x-msvideo",
     "video/x-matroska",
   ],
-  DOCUMENT: ["application/pdf"],
+  DOCUMENT: [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "text/plain",
+    "application/rtf",
+    "application/zip",
+    "application/x-zip-compressed",
+  ],
   ALL() {
     return [...this.IMAGE, ...this.VIDEO, ...this.DOCUMENT];
   },
@@ -125,7 +137,7 @@ function validateFiles(config = {}) {
         ? [req.file]
         : [];
 
-    // ① Check required file fields
+    //  Check required file fields
     if (requiredFields.length > 0) {
       const uploadedFields = new Set(fileArray.map((f) => f.fieldname));
       const missing = requiredFields.filter((f) => !uploadedFields.has(f));
@@ -137,7 +149,7 @@ function validateFiles(config = {}) {
       }
     }
 
-    // ② Check total file count
+    //  Check total file count
     if (fileArray.length > maxFiles) {
       return res.status(400).json({
         success: false,
@@ -145,7 +157,7 @@ function validateFiles(config = {}) {
       });
     }
 
-    // ③ Validate each file
+    //  Validate each file
     for (const file of fileArray) {
       // — Field-specific type check (e.g. "image" field must be IMAGE mime)
       const expectedCategory = fieldTypes[file.fieldname];
@@ -213,6 +225,20 @@ const fileConfigs = {
     maxFiles: 1,
     allowedTypes: [...MIME.IMAGE, ...MIME.DOCUMENT],
     maxFileSize: 10 * 1024 * 1024, // 10 MB
+  },
+
+  /** POST /assignments/teacher/create */
+  teacherCreateAssignment: {
+    maxFiles: 5,
+    allowedTypes: [...MIME.IMAGE, ...MIME.DOCUMENT],
+    maxFileSize: 20 * 1024 * 1024, // 20 MB
+  },
+
+  /** POST /assignments/student/submit/:assignmentId */
+  studentSubmitAssignment: {
+    maxFiles: 3,
+    allowedTypes: [...MIME.IMAGE, ...MIME.DOCUMENT],
+    maxFileSize: 20 * 1024 * 1024, // 20 MB
   },
 };
 
