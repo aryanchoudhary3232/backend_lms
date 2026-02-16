@@ -1,6 +1,11 @@
 // Centralized middleware exports
 const { verify, verifyAdmin, verifyTeacher } = require("./verify");
-const { upload, cloudinary } = require("./upload");
+const {
+  upload,
+  memoryUpload,
+  uploadToCloudinary,
+  cloudinary,
+} = require("./upload");
 const { errorHandler, notFound } = require("./errorHandler");
 const {
   requestLogger,
@@ -27,6 +32,8 @@ module.exports = {
 
   // File upload middleware
   upload,
+  memoryUpload,
+  uploadToCloudinary,
   cloudinary,
 
   // Error handling middlewares

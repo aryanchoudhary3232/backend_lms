@@ -5,6 +5,8 @@ const {
   verify,
   verifyTeacher,
   upload,
+  memoryUpload,
+  uploadToCloudinary,
   paramSanitizer,
   validate,
   schemas,
@@ -17,9 +19,10 @@ router.post(
   "/courses/create_course",
   verify,
   verifyTeacher,
-  upload.any(),
+  memoryUpload.any(),
   validate(schemas.createCourse),
   validateFiles(fileConfigs.createCourse),
+  uploadToCloudinary,
   teacherController.createCourse,
 );
 
@@ -29,9 +32,10 @@ router.put(
   verify,
   verifyTeacher,
   paramSanitizer,
-  upload.any(),
+  memoryUpload.any(),
   validate(schemas.updateCourse),
   validateFiles(fileConfigs.updateCourse),
+  uploadToCloudinary,
   teacherController.updateCourse,
 );
 

@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -6,7 +8,6 @@ const path = require("path");
 const fs = require("fs");
 const morgan = require("morgan");
 const { errorHandler, notFound, performanceMonitor } = require("./middleware");
-require("dotenv").config();
 
 const authRoutes = require("./routes/authRoutes");
 const courseRoutes = require("./routes/courseRoutes");
@@ -16,7 +17,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const cartRoutes = require("./routes/cartRoutes");
-const flashcardRoutes = require('./routes/flashcardRoutes');
+const flashcardRoutes = require("./routes/flashcardRoutes");
 const statsRoutes = require("./routes/statsRoutes");
 
 // Logging middleware
@@ -25,15 +26,14 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
-const accessLogStream = fs.createWriteStream(
-  path.join(logsDir, "access.log"),
-  { flags: "a" }
-);
+const accessLogStream = fs.createWriteStream(path.join(logsDir, "access.log"), {
+  flags: "a",
+});
 
 app.use(
   morgan(process.env.NODE_ENV === "production" ? "combined" : "dev", {
     stream: accessLogStream,
-  })
+  }),
 );
 
 // Performance monitoring
@@ -63,10 +63,10 @@ app.use("/auth", authRoutes);
 app.use("/courses", courseRoutes);
 
 // contact form
-app.use('/contact', contactRoutes);
+app.use("/contact", contactRoutes);
 
 // cart routes
-app.use('/cart', cartRoutes);
+app.use("/cart", cartRoutes);
 
 //teacher routes
 app.use("/teacher", teacherRoutes);
@@ -81,7 +81,7 @@ app.use("/admin", adminRoutes);
 app.use("/assignments", assignmentRoutes);
 
 // flashcard routes
-app.use('/api/flashcards', flashcardRoutes);
+app.use("/api/flashcards", flashcardRoutes);
 
 // stats routes
 app.use("/stats", statsRoutes);
