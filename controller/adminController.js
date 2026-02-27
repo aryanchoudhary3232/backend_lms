@@ -5,9 +5,9 @@ const Course = require("../models/Course");
 // 🟢 Dashboard Data
 const getDashboardData = async (req, res) => {
   try {
-    const studentCount = await Student.countDocuments();
-    const teacherCount = await Teacher.countDocuments();
-    const courseCount = await Course.countDocuments();
+    const studentCount = await Student.countDocuments({ isDeleted: false });
+    const teacherCount = await Teacher.countDocuments({ isDeleted: false });
+    const courseCount = await Course.countDocuments({ isDeleted: false });
 
     res.status(200).json({
       success: true,
@@ -26,8 +26,8 @@ const getDashboardData = async (req, res) => {
 // 👥 Get All Users
 const getAllUsers = async (req, res) => {
   try {
-    const students = await Student.find().select("-password"); // hide passwords
-    const teachers = await Teacher.find().select("-password");
+    const students = await Student.find({ isDeleted: false }).select("-password"); // hide passwords and exclude deleted
+    const teachers = await Teacher.find({ isDeleted: false }).select("-password");
 
     res.status(200).json({
       success: true,
@@ -46,7 +46,7 @@ const getAllUsers = async (req, res) => {
 // 📚 Get All Courses
 const getAllCourses = async (req, res) => {
   try {
-    const courses = await Course.find().populate("teacher", "name email");
+    const courses = await Course.find({ isDeleted: false }).populate("teacher", "name email");
     res.status(200).json({
       success: true,
       message: "All courses retrieved successfully",
@@ -61,16 +61,21 @@ const getAllCourses = async (req, res) => {
   }
 };
 
-// ❌ Delete Course
+// ❌ Delete Course (Soft Delete)
 const deleteCourse = async (req, res) => {
   try {
-    const deleted = await Course.findByIdAndDelete(req.params.id);
-    if (!deleted) {
+    const course = await Course.findById(req.params.id);
+    if (!course) {
       return res.status(404).json({
         success: false,
         message: "Course not found",
       });
     }
+
+    // Soft delete
+    course.isDeleted = true;
+    course.deletedAt = new Date();
+    await course.save();
 
     res.status(200).json({
       success: true,
@@ -145,7 +150,7 @@ const getTeacherById = async (req, res) => {
   }
 };
 
-// ❌ Delete Teacher
+// ❌ Delete Teacher (Soft Delete)
 const deleteTeacher = async (req, res) => {
   try {
     const { teacherId } = req.params;
@@ -160,13 +165,18 @@ const deleteTeacher = async (req, res) => {
       });
     }
 
-    // Delete all courses created by this teacher
+    // Soft delete all courses created by this teacher
     if (teacher.courses && teacher.courses.length > 0) {
-      await Course.deleteMany({ teacher: teacherId });
+      await Course.updateMany(
+        { teacher: teacherId },
+        { isDeleted: true, deletedAt: new Date() }
+      );
     }
 
-    // Delete the teacher
-    await Teacher.findByIdAndDelete(teacherId);
+    // Soft delete the teacher
+    teacher.isDeleted = true;
+    teacher.deletedAt = new Date();
+    await teacher.save();
 
     res.status(200).json({
       success: true,
@@ -184,7 +194,7 @@ const deleteTeacher = async (req, res) => {
   }
 };
 
-// ❌ Delete Student
+// ❌ Delete Student (Soft Delete)
 const deleteStudent = async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -198,14 +208,10 @@ const deleteStudent = async (req, res) => {
       });
     }
 
-    // Remove student from all enrolled courses
-    await Course.updateMany(
-      { students: studentId },
-      { $pull: { students: studentId } }
-    );
-
-    // Delete the student
-    await Student.findByIdAndDelete(studentId);
+    // Soft delete the student
+    student.isDeleted = true;
+    student.deletedAt = new Date();
+    await student.save();
 
     res.status(200).json({
       success: true,

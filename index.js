@@ -13,6 +13,7 @@ const courseRoutes = require("./routes/courseRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const superadminRoutes = require("./routes/superadminRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const cartRoutes = require("./routes/cartRoutes");
@@ -76,6 +77,9 @@ app.use("/student", studentRoutes);
 
 // admin routes
 app.use("/admin", adminRoutes);
+
+// superadmin routes
+app.use("/superadmin", superadminRoutes);
 
 // assignment routes
 app.use("/assignments", assignmentRoutes);

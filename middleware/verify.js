@@ -48,7 +48,7 @@ async function verifyAdmin(req, res, next) {
 
     // Optional: Check admin exists in DB
     const admin = await Admin.findById(decoded._id);
-    if (!admin || admin.role.toLowerCase() !== "admin") {
+    if (!admin || (admin.role.toLowerCase() !== "admin" && admin.role.toLowerCase() !== "superadmin")) {
       return res.status(403).json({ message: "Access denied, Admins only" });
     }
 
@@ -56,6 +56,31 @@ async function verifyAdmin(req, res, next) {
     next();
   } catch (error) {
     console.error("Error in verifyAdmin middleware:", error);
+    return res.status(403).json({ message: "Access denied or invalid token" });
+  }
+}
+
+//  Middleware to verify SuperAdmin only
+async function verifySuperAdmin(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ message: "Access denied, no token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, "aryan123");
+
+    // Check if user is SuperAdmin
+    const admin = await Admin.findById(decoded._id);
+    if (!admin || admin.role !== "SuperAdmin") {
+      return res.status(403).json({ message: "Access denied, SuperAdmins only" });
+    }
+
+    req.user = admin; // Attach admin object to request
+    next();
+  } catch (error) {
+    console.error("Error in verifySuperAdmin middleware:", error);
     return res.status(403).json({ message: "Access denied or invalid token" });
   }
 }
@@ -77,4 +102,4 @@ function verifyTeacher(req, res, next) {
 }
 
 
-module.exports = { verify, verifyAdmin, verifyTeacher };
+module.exports = { verify, verifyAdmin, verifySuperAdmin, verifyTeacher };
