@@ -14,13 +14,17 @@ const Order = require("../models/Order");
  */
 const getRevenueAnalytics = async (req, res) => {
   try {
-    // Total revenue from completed orders
+    // Total revenue from completed orders (100%)
     const totalRevenue = await Order.aggregate([
       { $match: { status: "completed" } },
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
 
-    // Revenue by course category
+    const totalAmount = totalRevenue[0]?.total || 0;
+    const platformRevenue = totalAmount * 0.30; // 30% for platform
+    const teacherRevenue = totalAmount * 0.70; // 70% for teachers
+
+    // Revenue by course category (platform's 30%)
     const revenueByCategory = await Order.aggregate([
       { $match: { status: "completed" } },
       {
@@ -35,11 +39,13 @@ const getRevenueAnalytics = async (req, res) => {
       {
         $group: {
           _id: "$course.category",
-          revenue: { $sum: "$amount" },
+          totalRevenue: { $sum: "$amount" },
+          platformRevenue: { $sum: { $multiply: ["$amount", 0.30] } },
+          teacherRevenue: { $sum: { $multiply: ["$amount", 0.70] } },
           orderCount: { $sum: 1 }
         }
       },
-      { $sort: { revenue: -1 } }
+      { $sort: { totalRevenue: -1 } }
     ]);
 
     // Revenue over time (last 30 days)
@@ -96,7 +102,9 @@ const getRevenueAnalytics = async (req, res) => {
       success: true,
       message: "Revenue analytics fetched successfully",
       data: {
-        totalRevenue: totalRevenue[0]?.total || 0,
+        totalRevenue: totalAmount,
+        platformRevenue,
+        teacherRevenue,
         revenueByCategory,
         revenueOverTime,
         ordersByStatus,
@@ -419,6 +427,10 @@ const getPlatformOverview = async (req, res) => {
       { $group: { _id: null, total: { $sum: "$amount" } } }
     ]);
 
+    const totalAmount = totalRevenue[0]?.total || 0;
+    const platformRevenue = totalAmount * 0.30; // 30% for platform
+    const teacherRevenue = totalAmount * 0.70; // 70% for teachers
+
     const totalOrders = await Order.countDocuments();
     const completedOrders = await Order.countDocuments({ status: "completed" });
     const pendingOrders = await Order.countDocuments({ status: "pending" });
@@ -458,7 +470,9 @@ const getPlatformOverview = async (req, res) => {
           deleted: deletedCourses
         },
         revenue: {
-          total: totalRevenue[0]?.total || 0,
+          total: totalAmount,
+          platformRevenue,
+          teacherRevenue,
           totalOrders,
           completedOrders,
           pendingOrders,
@@ -577,6 +591,9 @@ const getTeacherPerformance = async (req, res) => {
           { $group: { _id: null, total: { $sum: "$amount" } } }
         ]);
 
+        const totalRevenue = revenue[0]?.total || 0;
+        const teacherRevenue = totalRevenue * 0.70; // 70% for teacher
+
         return {
           teacherId: teacher._id,
           name: teacher.name,
@@ -584,9 +601,9 @@ const getTeacherPerformance = async (req, res) => {
           verificationStatus: teacher.verificationStatus,
           totalCourses: courses.length,
           totalStudents,
-          totalRevenue: revenue[0]?.total || 0,
+          totalRevenue: teacherRevenue,
           averageRevenuePerCourse: courses.length > 0 
-            ? (revenue[0]?.total || 0) / courses.length 
+            ? teacherRevenue / courses.length 
             : 0
         };
       })

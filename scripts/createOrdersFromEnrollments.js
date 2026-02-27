@@ -57,7 +57,7 @@ async function createOrdersFromEnrollments() {
         });
 
         ordersCreated++;
-        console.log(`✅ Created order: ${student.name} -> ${course.title} ($${course.price})`);
+        console.log(`✅ Created order: ${student.name} -> ${course.title} (₹${course.price})`);
       }
     }
 
@@ -77,7 +77,13 @@ async function createOrdersFromEnrollments() {
       { $match: { status: 'completed' } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
-    console.log(`💰 Total Revenue: $${totalRevenue[0]?.total || 0}`);
+    const totalAmount = totalRevenue[0]?.total || 0;
+    const platformRevenue = totalAmount * 0.30;
+    const teacherRevenue = totalAmount * 0.70;
+    
+    console.log(`💰 Total Revenue: ₹${totalAmount}`);
+    console.log(`🏢 Platform Revenue (30%): ₹${platformRevenue}`);
+    console.log(`👨‍🏫 Teacher Revenue (70%): ₹${teacherRevenue}`);
 
     console.log('\n✅ Migration complete!\n');
     
