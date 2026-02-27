@@ -129,6 +129,22 @@ const getCoursesByCategory = async (req, res) => {
     
     const coursesByCategory = await Course.aggregate([
       { $match: filter },
+      // Lookup teacher info BEFORE grouping
+      {
+        $lookup: {
+          from: "teachers",
+          localField: "teacher",
+          foreignField: "_id",
+          as: "teacherInfo"
+        }
+      },
+      {
+        $unwind: {
+          path: "$teacherInfo",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // Now group with populated teacher data
       {
         $group: {
           _id: "$category",
@@ -138,7 +154,11 @@ const getCoursesByCategory = async (req, res) => {
               title: "$title",
               price: "$price",
               level: "$level",
-              teacher: "$teacher",
+              teacher: {
+                _id: "$teacherInfo._id",
+                name: "$teacherInfo.name",
+                email: "$teacherInfo.email"
+              },
               studentCount: { $size: "$students" },
               isDeleted: "$isDeleted",
               deletedAt: "$deletedAt"
@@ -150,12 +170,6 @@ const getCoursesByCategory = async (req, res) => {
       },
       { $sort: { _id: 1 } }
     ]);
-
-    // Populate teacher info
-    await Course.populate(coursesByCategory, {
-      path: "courses.teacher",
-      select: "name email"
-    });
 
     res.status(200).json({
       success: true,
