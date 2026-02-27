@@ -1,5 +1,5 @@
 // Centralized middleware exports
-const { verify, verifyAdmin, verifyTeacher } = require("./verify");
+const { verify, verifyAdmin, verifyTeacher, verifySuperAdmin } = require("./verify");
 const { upload, cloudinary } = require("./upload");
 const { errorHandler, notFound } = require("./errorHandler");
 const {
@@ -22,6 +22,7 @@ module.exports = {
   // Authentication middlewares
   verify,
   verifyAdmin,
+  verifySuperAdmin,
   verifyTeacher,
   verifyStudent,
 
