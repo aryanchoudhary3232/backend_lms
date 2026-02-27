@@ -125,7 +125,7 @@ const getCoursesByCategory = async (req, res) => {
   try {
     const { includeDeleted } = req.query;
     
-    const filter = includeDeleted === 'true' ? {} : { isDeleted: false };
+    const filter = includeDeleted === 'true' ? {} : { isDeleted: { $ne: true } };
     
     const coursesByCategory = await Course.aggregate([
       { $match: filter },
@@ -247,7 +247,7 @@ const getAllUsers = async (req, res) => {
   try {
     const { includeDeleted } = req.query;
     
-    const filter = includeDeleted === 'true' ? {} : { isDeleted: false };
+    const filter = includeDeleted === 'true' ? {} : { isDeleted: { $ne: true } };
 
     const students = await Student.find(filter).select("-password");
     const teachers = await Teacher.find(filter).select("-password");
@@ -388,15 +388,15 @@ const restoreUser = async (req, res) => {
 const getPlatformOverview = async (req, res) => {
   try {
     // User counts
-    const totalStudents = await Student.countDocuments({ isDeleted: false });
-    const totalTeachers = await Teacher.countDocuments({ isDeleted: false });
-    const totalAdmins = await Admin.countDocuments({ isDeleted: false });
+    const totalStudents = await Student.countDocuments({ isDeleted: { $ne: true } });
+    const totalTeachers = await Teacher.countDocuments({ isDeleted: { $ne: true } });
+    const totalAdmins = await Admin.countDocuments({ isDeleted: { $ne: true } });
     const deletedUsers = await Student.countDocuments({ isDeleted: true }) +
                          await Teacher.countDocuments({ isDeleted: true }) +
                          await Admin.countDocuments({ isDeleted: true });
 
     // Course counts
-    const totalCourses = await Course.countDocuments({ isDeleted: false });
+    const totalCourses = await Course.countDocuments({ isDeleted: { $ne: true } });
     const deletedCourses = await Course.countDocuments({ isDeleted: true });
 
     // Revenue stats
@@ -416,12 +416,12 @@ const getPlatformOverview = async (req, res) => {
 
     const recentStudents = await Student.countDocuments({ 
       createdAt: { $gte: sevenDaysAgo },
-      isDeleted: false 
+      isDeleted: { $ne: true }
     });
 
     const recentCourses = await Course.countDocuments({ 
       createdAt: { $gte: sevenDaysAgo },
-      isDeleted: false 
+      isDeleted: { $ne: true }
     });
 
     const recentOrders = await Order.countDocuments({ 
@@ -483,7 +483,7 @@ const getUserGrowthAnalytics = async (req, res) => {
 
     // Student growth
     const studentGrowth = await Student.aggregate([
-      { $match: { createdAt: { $gte: daysAgo }, isDeleted: false } },
+      { $match: { createdAt: { $gte: daysAgo }, isDeleted: { $ne: true } } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -495,7 +495,7 @@ const getUserGrowthAnalytics = async (req, res) => {
 
     // Teacher growth
     const teacherGrowth = await Teacher.aggregate([
-      { $match: { createdAt: { $gte: daysAgo }, isDeleted: false } },
+      { $match: { createdAt: { $gte: daysAgo }, isDeleted: { $ne: true } } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -506,8 +506,8 @@ const getUserGrowthAnalytics = async (req, res) => {
     ]);
 
     // Total users by type
-    const totalStudents = await Student.countDocuments({ isDeleted: false });
-    const totalTeachers = await Teacher.countDocuments({ isDeleted: false });
+    const totalStudents = await Student.countDocuments({ isDeleted: { $ne: true } });
+    const totalTeachers = await Teacher.countDocuments({ isDeleted: { $ne: true } });
 
     res.status(200).json({
       success: true,
@@ -537,7 +537,7 @@ const getUserGrowthAnalytics = async (req, res) => {
  */
 const getTeacherPerformance = async (req, res) => {
   try {
-    const teachers = await Teacher.find({ isDeleted: false })
+    const teachers = await Teacher.find({ isDeleted: { $ne: true } })
       .select("name email verificationStatus")
       .lean();
 
@@ -545,7 +545,7 @@ const getTeacherPerformance = async (req, res) => {
       teachers.map(async (teacher) => {
         const courses = await Course.find({ 
           teacher: teacher._id, 
-          isDeleted: false 
+          isDeleted: { $ne: true }
         });
 
         const totalStudents = courses.reduce(
@@ -602,7 +602,7 @@ const getTeacherPerformance = async (req, res) => {
  */
 const getCoursePerformance = async (req, res) => {
   try {
-    const courses = await Course.find({ isDeleted: false })
+    const courses = await Course.find({ isDeleted: { $ne: true } })
       .populate("teacher", "name email")
       .lean();
 
