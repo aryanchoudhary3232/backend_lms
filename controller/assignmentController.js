@@ -350,12 +350,11 @@ async function deleteAssignment(req, res) {
 // ============= STUDENT FUNCTIONS =============
 
 /**
- * Helper: Get enrolled course IDs for a student
- * Fetches the student profile and extracts the list of enrolled course IDs.
+ * Helper: Get enrolled course IDs and enrollment dates for a student
  * @param {string} studentId - The ID of the student
- * @returns {Promise<string[]>} - Array of course IDs
+ * @returns {Promise<{enrolledCourseIds: string[], enrollmentMap: Map<string, Date>}>}
  */
-async function getStudentEnrolledCourseIds(studentId) {
+async function getStudentEnrollmentData(studentId) {
   const Student = require("../models/Student");
   const student = await Student.findById(studentId).select("enrolledCourses");
 
@@ -363,10 +362,56 @@ async function getStudentEnrolledCourseIds(studentId) {
     throw new Error("Student profile not found");
   }
 
-  // enrolledCourses is an array of objects with 'course' field
-  return (student.enrolledCourses || []).map((enrollment) =>
-    enrollment.course ? enrollment.course.toString() : enrollment.toString()
-  );
+  const enrollmentMap = new Map();
+  const enrolledCourseIds = [];
+
+  for (const enrollment of student.enrolledCourses || []) {
+    const courseId = enrollment.course
+      ? enrollment.course.toString()
+      : enrollment.toString();
+
+    if (!courseId) continue;
+
+    enrolledCourseIds.push(courseId);
+    if (enrollment.enrolledAt) {
+      enrollmentMap.set(courseId, new Date(enrollment.enrolledAt));
+    }
+  }
+
+  return { enrolledCourseIds, enrollmentMap };
+}
+
+/**
+ * Helper: Compute student-specific due date based on enrollment time.
+ * Students enrolled after assignment creation get the same deadline window
+ * (dueDate - createdAt) from their enrollment date.
+ * @param {Object} assignment - Assignment document
+ * @param {Date | undefined} enrolledAt - Student enrollment date for assignment course
+ * @returns {Date}
+ */
+function getEffectiveDueDate(assignment, enrolledAt) {
+  const assignmentDueDate = new Date(assignment.dueDate);
+  const assignmentCreatedAt = new Date(assignment.createdAt);
+
+  if (
+    !enrolledAt ||
+    Number.isNaN(assignmentDueDate.getTime()) ||
+    Number.isNaN(assignmentCreatedAt.getTime())
+  ) {
+    return assignmentDueDate;
+  }
+
+  const deadlineWindowMs =
+    assignmentDueDate.getTime() - assignmentCreatedAt.getTime();
+
+  if (deadlineWindowMs <= 0) {
+    return assignmentDueDate;
+  }
+
+  const effectiveStartDate =
+    enrolledAt > assignmentCreatedAt ? enrolledAt : assignmentCreatedAt;
+
+  return new Date(effectiveStartDate.getTime() + deadlineWindowMs);
 }
 
 /**
@@ -395,20 +440,24 @@ function buildAssignmentQuery(enrolledCourseIds, filterCourseId) {
  * @param {string} studentId - The ID of the student
  * @returns {Promise<Object>} - Assignment object with submissionStatus
  */
-async function enrichAssignmentWithStatus(assignment, studentId) {
+async function enrichAssignmentWithStatus(assignment, studentId, enrolledAt) {
   const submission = await Submission.findOne({
     assignment: assignment._id,
     student: studentId,
   });
 
+  const effectiveDueDate = getEffectiveDueDate(assignment, enrolledAt);
   const now = new Date();
-  const isOverdue = now > assignment.dueDate && !submission;
+  const isOverdue = now > effectiveDueDate && !submission;
 
   return {
     ...assignment.toObject(),
+    originalDueDate: assignment.dueDate,
+    dueDate: effectiveDueDate,
     submissionStatus: {
       submitted: !!submission,
       isOverdue,
+      effectiveDueDate,
       grade: submission?.grade || null,
       submittedAt: submission?.submittedAt || null,
     },
@@ -425,9 +474,9 @@ async function getStudentAssignments(req, res) {
     const { courseId, status } = req.query;
 
     // 1. Get enrolled courses
-    let enrolledCourseIds;
+    let enrollmentData;
     try {
-      enrolledCourseIds = await getStudentEnrolledCourseIds(studentId);
+      enrollmentData = await getStudentEnrollmentData(studentId);
     } catch (err) {
       console.error("Error fetching student profile:", err.message);
       return res.status(404).json({
@@ -436,6 +485,8 @@ async function getStudentAssignments(req, res) {
           "Student profile not found. Please ensure you are logged in as a student.",
       });
     }
+
+    const { enrolledCourseIds, enrollmentMap } = enrollmentData;
 
     if (enrolledCourseIds.length === 0) {
       return res.status(200).json({
@@ -455,9 +506,17 @@ async function getStudentAssignments(req, res) {
 
     // 3. Enrich with Submission Status
     const assignmentsWithStatus = await Promise.all(
-      assignments.map((assignment) =>
-        enrichAssignmentWithStatus(assignment, studentId)
-      )
+      assignments.map((assignment) => {
+        const assignmentCourseId = assignment.course?._id
+          ? assignment.course._id.toString()
+          : assignment.course.toString();
+        const enrolledAt = enrollmentMap.get(assignmentCourseId);
+        return enrichAssignmentWithStatus(assignment, studentId, enrolledAt);
+      })
+    );
+
+    assignmentsWithStatus.sort(
+      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     );
 
     // 4. Filter Results based on status query param
@@ -518,8 +577,24 @@ async function submitAssignment(req, res) {
     }
 
     // Check deadline
+    let enrollmentData;
+    try {
+      enrollmentData = await getStudentEnrollmentData(studentId);
+    } catch (err) {
+      return res.status(404).json({
+        success: false,
+        error: true,
+        message: "Student profile not found",
+      });
+    }
+
+    const enrolledAt = enrollmentData.enrollmentMap.get(
+      assignment.course.toString()
+    );
+    const effectiveDueDate = getEffectiveDueDate(assignment, enrolledAt);
+
     const now = new Date();
-    const isLate = now > assignment.dueDate;
+    const isLate = now > effectiveDueDate;
     if (isLate && !assignment.allowLateSubmission) {
       return res.status(400).json({
         success: false,
