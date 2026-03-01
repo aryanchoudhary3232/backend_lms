@@ -26,8 +26,12 @@ const getDashboardData = async (req, res) => {
 // 👥 Get All Users
 const getAllUsers = async (req, res) => {
   try {
-    const students = await Student.find({ isDeleted: false }).select("-password"); // hide passwords and exclude deleted
-    const teachers = await Teacher.find({ isDeleted: false }).select("-password");
+    const students = await Student.find({ isDeleted: false }).select(
+      "-password",
+    ); // hide passwords and exclude deleted
+    const teachers = await Teacher.find({ isDeleted: false }).select(
+      "-password",
+    );
 
     res.status(200).json({
       success: true,
@@ -46,7 +50,10 @@ const getAllUsers = async (req, res) => {
 // 📚 Get All Courses
 const getAllCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ isDeleted: false }).populate("teacher", "name email");
+    const courses = await Course.find({ isDeleted: false }).populate(
+      "teacher",
+      "name email",
+    );
     res.status(200).json({
       success: true,
       message: "All courses retrieved successfully",
@@ -96,8 +103,7 @@ const getCourseById = async (req, res) => {
     const { courseId } = req.params;
 
     const course = await Course.findById(courseId)
-      .populate("teacher", "name email")
-      .populate("students", "name email");
+      .populate("teacher", "name email verificationStatus");
 
     if (!course) {
       return res.status(404).json({
@@ -106,10 +112,38 @@ const getCourseById = async (req, res) => {
       });
     }
 
+    // Find all students who have enrolled in this course
+    const enrolledStudents = await Student.find({
+      "enrolledCourses.course": courseId,
+      isDeleted: false
+    })
+      .select("name email enrolledCourses")
+      .lean();
+
+    // Format student data with enrollment details
+    const studentsWithDetails = enrolledStudents.map(student => {
+      const enrollment = student.enrolledCourses.find(
+        ec => ec.course.toString() === courseId
+      );
+      
+      return {
+        _id: student._id,
+        name: student.name,
+        email: student.email,
+        enrolledAt: enrollment?.enrolledAt,
+        quizScoresCount: enrollment?.quizScores?.length || 0,
+        completedTopicsCount: enrollment?.completedTopics?.length || 0
+      };
+    });
+
     res.status(200).json({
       success: true,
       message: "Course retrieved successfully",
-      data: course,
+      data: {
+        ...course.toObject(),
+        enrolledStudents: studentsWithDetails,
+        enrolledCount: studentsWithDetails.length
+      },
     });
   } catch (error) {
     console.error("Course Detail Error:", error);
@@ -169,7 +203,7 @@ const deleteTeacher = async (req, res) => {
     if (teacher.courses && teacher.courses.length > 0) {
       await Course.updateMany(
         { teacher: teacherId },
-        { isDeleted: true, deletedAt: new Date() }
+        { isDeleted: true, deletedAt: new Date() },
       );
     }
 
@@ -295,6 +329,34 @@ const rejectTeacher = async (req, res) => {
   }
 };
 
+// 🗑️ Get Deleted Members (Students and Teachers)
+const getDeletedMembers = async (req, res) => {
+  try {
+    const deletedStudents = await Student.find({ isDeleted: true })
+      .select("-password")
+      .sort({ deletedAt: -1 });
+
+    const deletedTeachers = await Teacher.find({ isDeleted: true })
+      .select("-password")
+      .sort({ deletedAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Deleted members retrieved successfully",
+      data: {
+        students: deletedStudents,
+        teachers: deletedTeachers,
+      },
+    });
+  } catch (error) {
+    console.error("Get Deleted Members Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching deleted members",
+    });
+  }
+};
+
 module.exports = {
   getDashboardData,
   getAllUsers,
@@ -306,4 +368,5 @@ module.exports = {
   deleteStudent,
   approveTeacher,
   rejectTeacher,
+  getDeletedMembers,
 };
