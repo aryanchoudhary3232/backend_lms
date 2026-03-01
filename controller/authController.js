@@ -41,6 +41,8 @@ async function register(req, res) {
       newUser = new Teacher({ name, email, password: hashedPassword, role });
     } else if (role === "Admin") {
       newUser = new Admin({ name, email, password: hashedPassword, role });
+    } else if (role === "SuperAdmin") {
+      newUser = new Admin({ name, email, password: hashedPassword, role: "SuperAdmin" });
     } else {
       return res.json({
         message: "Invalid role provided",

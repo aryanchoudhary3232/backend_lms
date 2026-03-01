@@ -19,6 +19,7 @@ const {
   deleteStudent,
   approveTeacher,
   rejectTeacher,
+  getDeletedMembers,
 } = require("../controller/adminController");
 
 // ===== ROUTER-BASED MIDDLEWARE =====
@@ -37,6 +38,9 @@ router.get("/dashboard", getDashboardData);
 
 //  Get All Users (Students + Teachers)
 router.get("/users", getAllUsers);
+
+//  Get Deleted Members (Students + Teachers)
+router.get("/deleted-members", getDeletedMembers);
 
 //  Get Teacher Details by ID
 router.get("/teachers/:teacherId", getTeacherById);
