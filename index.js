@@ -54,8 +54,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const MONGO_URL =
-  process.env.MONGO_URL_ATLAS ||
-  "mongodb+srv://aryan:aryan123@cluster0.qxutmim.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+  process.env.MONGO_URL_ATLAS
 
 mongoose
   .connect(MONGO_URL)
