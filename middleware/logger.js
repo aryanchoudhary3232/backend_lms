@@ -12,7 +12,7 @@ const requestLogger = (req, res, next) => {
   
   // Override res.end to log after response
   res.end = function(...args) {
-    const duration = Date.now() - start;
+    const duration = Date.now() - start; 
     const logData = {
       timestamp: new Date().toISOString(),
       method: req.method,

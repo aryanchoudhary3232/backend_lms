@@ -44,6 +44,16 @@ const teacherSchema = new mongoose.Schema({
       ref: "Course",
     },
   ],
+  
+  // Soft delete fields
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 const Teacher = mongoose.model("Teacher", teacherSchema);

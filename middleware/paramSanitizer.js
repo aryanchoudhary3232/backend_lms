@@ -24,7 +24,7 @@ const OBJECT_ID_PARAMS = [
  * Usage: router.use(paramSanitizer)  OR  router.get('/:courseId', paramSanitizer, controller)
  */
 function paramSanitizer(req, res, next) {
-  for (const [key, value] of Object.entries(req.params)) {
+  for (const [key, value] of Object.entries(req.params)) { 
     if (OBJECT_ID_PARAMS.includes(key)) {
       if (!mongoose.Types.ObjectId.isValid(value)) {
         return res.status(400).json({

@@ -1,8 +1,11 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const Student = require("../models/Student");
 const Teacher = require("../models/Teacher");
 const Admin = require("../models/Admin");
+const Otp = require("../models/Otp");
+const { sendOtpEmail } = require("../utils/sendEmail");
 
 // 🔹 Register User (Student / Teacher / Admin)
 async function register(req, res) {
@@ -41,6 +44,8 @@ async function register(req, res) {
       newUser = new Teacher({ name, email, password: hashedPassword, role });
     } else if (role === "Admin") {
       newUser = new Admin({ name, email, password: hashedPassword, role });
+    } else if (role === "SuperAdmin") {
+      newUser = new Admin({ name, email, password: hashedPassword, role: "SuperAdmin" });
     } else {
       return res.json({
         message: "Invalid role provided",
@@ -132,9 +137,9 @@ async function login(req, res) {
 
     if (lastLoginDate) {
       lastLoginDate = new Date(lastLoginDate.getFullYear(), lastLoginDate.getMonth(), lastLoginDate.getDate());
-      
+
       const diffTime = Math.abs(today - lastLoginDate);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
       if (diffDays === 1) {
         // Login is consecutive (yesterday)
@@ -399,10 +404,202 @@ async function changePassword(req, res) {
   }
 }
 
+// ============================================
+// 🔹 FORGOT PASSWORD FUNCTIONS
+// ============================================
+
+const JWT_SECRET = process.env.JWT_SECRET || "aryan123";
+
+async function findUserByEmail(email) {
+  return (
+    (await Student.findOne({ email })) ||
+    (await Teacher.findOne({ email })) ||
+    (await Admin.findOne({ email }))
+  );
+}
+
+function getModelForRole(role) {
+  if (role === "Student") return Student;
+  if (role === "Teacher") return Teacher;
+  if (role === "Admin") return Admin;
+  return null;
+}
+
+async function forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+        success: false,
+        error: true,
+      });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({
+        message: "No account found with this email address",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Delete any existing OTPs for this email
+    await Otp.deleteMany({ email });
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    await Otp.create({ email, otp });
+
+    await sendOtpEmail(email, otp);
+
+    res.json({
+      message: "OTP sent to your email",
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({
+      message: "Failed to send OTP. Please try again.",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+async function verifyOtp(req, res) {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        message: "Email and OTP are required",
+        success: false,
+        error: true,
+      });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({
+        message: "No account found with this email address",
+        success: false,
+        error: true,
+      });
+    }
+
+    const otpRecord = await Otp.findOne({ email, otp });
+    if (!otpRecord) {
+      return res.status(400).json({
+        message: "Invalid or expired OTP",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Generate a short-lived reset token (5 minutes)
+    const resetToken = jwt.sign(
+      { email, purpose: "password-reset" },
+      JWT_SECRET,
+      { expiresIn: "5m" }
+    );
+
+    // Clean up the used OTP
+    await Otp.deleteMany({ email });
+
+    res.json({
+      message: "OTP verified successfully",
+      resetToken,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Verify OTP error:", error);
+    res.status(500).json({
+      message: "Failed to verify OTP. Please try again.",
+      success: false,
+      error: true,
+    });
+  }
+}
+
+async function resetPassword(req, res) {
+  try {
+    const { email, newPassword, resetToken } = req.body;
+
+    if (!email || !newPassword || !resetToken) {
+      return res.status(400).json({
+        message: "Email, new password, and reset token are required",
+        success: false,
+        error: true,
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters long",
+        success: false,
+        error: true,
+      });
+    }
+
+    // Verify the reset token
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, JWT_SECRET);
+    } catch {
+      return res.status(400).json({
+        message: "Reset token is invalid or expired. Please request a new OTP.",
+        success: false,
+        error: true,
+      });
+    }
+
+    if (decoded.email !== email || decoded.purpose !== "password-reset") {
+      return res.status(400).json({
+        message: "Invalid reset token",
+        success: false,
+        error: true,
+      });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({
+        message: "No account found with this email address",
+        success: false,
+        error: true,
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({
+      message: "Password reset successfully. You can now login.",
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({
+      message: "Failed to reset password. Please try again.",
+      success: false,
+      error: true,
+    });
+  }
+}
+
 module.exports = {
   register,
   login,
   getProfile,
   updateProfile,
   changePassword,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
 };

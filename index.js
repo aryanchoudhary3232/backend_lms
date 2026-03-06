@@ -15,6 +15,7 @@ const courseRoutes = require("./routes/courseRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const superadminRoutes = require("./routes/superadminRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const cartRoutes = require("./routes/cartRoutes");
@@ -40,15 +41,21 @@ app.use(
 // Performance monitoring
 app.use(performanceMonitor);
 
-app.use(cors());
+// CORS configuration
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const MONGO_URL =
-  process.env.MONGO_URL_ATLAS ||
-  "mongodb+srv://aryan:aryan123@cluster0.qxutmim.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+  process.env.MONGO_URL_ATLAS
 
 mongoose
   .connect(MONGO_URL)
@@ -77,6 +84,9 @@ app.use("/student", studentRoutes);
 
 // admin routes
 app.use("/admin", adminRoutes);
+
+// superadmin routes
+app.use("/superadmin", superadminRoutes);
 
 // assignment routes
 app.use("/assignments", assignmentRoutes);

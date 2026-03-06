@@ -64,6 +64,16 @@ const courseSchema = new mongoose.Schema({
       ],
     },
   ],
+  
+  // Soft delete fields
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 const Course = mongoose.model("Course", courseSchema);

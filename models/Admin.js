@@ -16,7 +16,16 @@ const adminSchema = new mongoose.Schema({
   },
   role: {
     type: String,
+    enum: ["Admin", "SuperAdmin"],
     default: "Admin",
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  deletedAt: {
+    type: Date,
+    default: null,
   },
 });
 
