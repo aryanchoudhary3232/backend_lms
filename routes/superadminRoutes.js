@@ -92,6 +92,10 @@ router.get("/users/deleted", getDeletedUsers);
  * @route   PUT /superadmin/users/:userId/restore
  * @desc    Restore a deleted user
  * @body    { userType: 'Student' | 'Teacher' | 'Admin' }
+ * @access  SuperAdmin only
+ */
+router.put("/users/:userId/restore", restoreUser);
+
 // ============================================
 // 📈 ADVANCED ANALYTICS
 // ============================================

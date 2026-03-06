@@ -371,18 +371,22 @@ const restoreUser = async (req, res) => {
         });
     }
 
-    user = await Model.findByIdAndUpdate(
-      userId,
-      { isDeleted: false, deletedAt: null },
-      { new: true }
-    ).select("-password");
-
-    if (!user) {
+    // Find the user first to check if they exist
+    const existingUser = await Model.findById(userId);
+    
+    if (!existingUser) {
       return res.status(404).json({
         success: false,
         message: `${userType} not found`
       });
     }
+
+    // Update the user to restore
+    user = await Model.findByIdAndUpdate(
+      userId,
+      { isDeleted: false, deletedAt: null },
+      { new: true }
+    ).select("-password");
 
     res.status(200).json({
       success: true,
